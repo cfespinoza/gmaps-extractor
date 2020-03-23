@@ -44,20 +44,8 @@ def get_score_info(elem):
     else:
         "", ""
 
-def main():
-    parser = argparse.ArgumentParser(
-        prog='Scrapper',
-        usage='selenium_extractor.py -cp 28047 -d <driver_path>'
-    )
-    parser.add_argument('-cp', '--postal_code', nargs='?', help='postal code')
-    parser.add_argument('-d', '--driver_path', nargs='?', help='selenium driver location')
 
-    args = parser.parse_args()
-    # url = "https://www.google.com/maps/search/Restaurants/28047/"
-    # url = "https://www.google.com/maps/search/Restaurants//@40.3995807,-3.771754,15z"
-    url_to_be_formatted = "https://www.google.com/maps/search/Restaurants/{coords}"
-    url_get_coord = "https://www.google.com/maps/place/{postal_code}+Spain/".format(postal_code=args.postal_code)
-
+def get_driver(driver_location):
     chromeOptions = webdriver.ChromeOptions()
     chromeOptions.add_experimental_option("prefs", {"profile.managed_default_content_settings.": 2})
     chromeOptions.add_argument("--no-sandbox")
@@ -73,22 +61,41 @@ def main():
     chromeOptions.add_argument("--headless")
     # initialize the driver
     driver = webdriver.Chrome(
-        # executable_path="/home/cflores/cflores_workspace/google_maps_exractor/notebooks_test/chromedriver",
-        executable_path=args.driver_path,
+        executable_path=driver_location,
         chrome_options=chromeOptions)
     driver.implicitly_wait(2)
+    return driver
 
+
+def main():
+    parser = argparse.ArgumentParser(
+        prog='Scrapper',
+        usage='gmaps-extractor.py -cp 28047 -d <driver_path>'
+    )
+    parser.add_argument('-cp', '--postal_code', nargs='?', help='postal code')
+    parser.add_argument('-d', '--driver_path', nargs='?', help='selenium driver location')
+
+    args = parser.parse_args()
+    url_to_be_formatted = "https://www.google.com/maps/search/{postal_code}+Restaurants+Bar/{coords}"
+    url_get_coord = "https://www.google.com/maps/place/{postal_code}+Spain/".format(postal_code=args.postal_code)
+
+    driver = get_driver(args.driver_path)
+
+    logger.info(" url to get coord: {url}".format(url = url_get_coord))
     driver.get(url_get_coord)
     WebDriverWait(driver, 20).until(
         expected_conditions.url_changes(url_get_coord)
     )
     current_url = driver.current_url
+    logger.info(" url with coords: {url}".format(url=current_url))
+
     coords = current_url.split("/")[-2]
     logger.info("Coords found -{}-".format(coords))
-    url = url_to_be_formatted.format(coords=coords)
+    url = url_to_be_formatted.format(coords=coords, postal_code=args.postal_code)
     logger.info("Formatted url: {}".format(url))
     driver.get(url)
 
+    driver.set_page_load_timeout(20)
     processed_rest = {}
 
     for i in range(1, 11):
@@ -126,12 +133,14 @@ def main():
                     "schedule": schedule
                 }
                 logger.info(
-                    "Restaurant -{name}- has been added to processed_rest list with final size: {size}".format(name=name,
-                                                                                                               size=len(
-                                                                                                                   processed_rest)))
+                    "Restaurant -{name}- has been added to processed_rest list with final size: {size}".format(
+                        name=name,
+                        size=len(
+                            processed_rest)))
             logger.info(" ")
-        logger.info("At page -{idx}- the total of restaurants that have been processed -{total}-".format(idx=i, total=len(
-            processed_rest)))
+        logger.info(
+            "At page -{idx}- the total of restaurants that have been processed -{total}-".format(idx=i, total=len(
+                processed_rest)))
         logger.info(" ")
 
         while not processed_page:
@@ -145,6 +154,9 @@ def main():
                     if processed_rest.get(name).get("comments") is None:
                         logger.info("Trying to extract comment for -{restaurant}-".format(restaurant=name))
                         driver.execute_script("arguments[0].click();", r)
+                        WebDriverWait(driver, 20).until(
+                            expected_conditions.url_changes(driver.current_url)
+                        )
                         # driver.implicitly_wait(10)
                         comments_list = driver.find_elements_by_class_name("section-review-text")
                         comments = [elem.text for elem in comments_list]
@@ -171,6 +183,9 @@ def main():
                         processed_rest[name]["occupancy"] = occupancy_obj
                         button_back_to_list = driver.find_element_by_class_name("section-back-to-list-button")
                         driver.execute_script("arguments[0].click();", button_back_to_list)
+                        WebDriverWait(driver, 20).until(
+                            expected_conditions.url_changes(driver.current_url)
+                        )
                         break
                     else:
                         logger.info("Comments has been processed for restaurant -{restaurant}-".format(restaurant=name))
@@ -180,21 +195,24 @@ def main():
 
             total_processed = ["comments" in processed_rest[rest].keys() for rest in processed_rest]
             logger.info(
-                "There are -{commented}- restaurante with comments of {total}".format(commented=total_processed.count(True),
-                                                                                      total=len(processed_rest)))
-            processed_page = all(total_processed) and without_comments == 0 or len(total_processed) >= 20
+                "There are -{commented}- restaurante with comments of {total}".format(
+                    commented=total_processed.count(True),
+                    total=len(processed_rest)))
+            processed_page = all(total_processed) and without_comments == 0
 
         next_button = driver.find_element_by_xpath(
             "//div[@class='gm2-caption']/div/div/button[@jsaction='pane.paginationSection.nextPage']")
         driver.execute_script("arguments[0].click();", next_button)
+        WebDriverWait(driver, 20).until(
+            expected_conditions.url_changes(driver.current_url)
+        )
         # driver.implicitly_wait(20)
 
     with open('data.json', 'w') as file:
-        json.dump(processed_rest, file)
+        json.dump(processed_rest, file, ensure_ascii=False)
 
     driver.quit()
 
 
 if __name__ == "__main__":
     main()
-

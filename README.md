@@ -3,7 +3,7 @@
 how to use:
 
 ```
-python extractor/pyqt_extractor/extractor.py --postal_code=<postal_code> --driver_path=<selenium_driver_location> 
+python gmaps-extractor/gmaps-extractor/extractor.py --postal_code=<postal_code> --driver_path=<selenium_driver_location> 
 ```
 
 Dejará un fichero con nombre `data.json` con la información recabada. No es la versión final, debido a algunos problemas
