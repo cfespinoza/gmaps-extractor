@@ -3,7 +3,7 @@ import json
 import logging
 import sys
 
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
@@ -112,6 +112,42 @@ def extract_general_info(latest_results, previous_result):
     return processed_rest
 
 
+def get_comments(driver):
+    # todo
+    comments_list = driver.find_elements_by_class_name("section-review-text")
+    comments = [elem.text for elem in comments_list]
+    logger.info("Found -{total_comments}- comments for restaurant -{rest_name}-".format(
+        total_comments=len(comments), rest_name=name))
+
+
+def get_occupancy(driver):
+    occupancy = None
+    occupancy_obj = {}
+    try:
+        occupancy = driver.find_element_by_class_name('section-popular-times')
+        if occupancy:
+            days_occupancy_container = occupancy.find_elements_by_xpath(
+                "//div[contains(@class, 'section-popular-times-container')]/div")
+            for d in days_occupancy_container:
+                day = get_day_from_index(d.get_attribute("jsinstance"))
+                occupancy_by_hour = d.find_elements_by_xpath(
+                    "div[contains(@class, 'section-popular-times-graph')]/div[contains(@class, 'section-popular-times-bar')]")
+                occupancy_by_hour_values = [o.get_attribute("aria-label") for o in occupancy_by_hour]
+                occupancy_obj[day] = occupancy_by_hour_values
+    except NoSuchElementException:
+        logger.warning("There is no occupancy elements")
+        occupancy = None
+    return occupancy_obj
+
+def get_info_obj(driver, xpathQuery):
+    element = None
+    try:
+        element = driver.find_element_by_xpath(xpathQuery)
+    except NoSuchElementException:
+        element = None
+    return element
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog='Scrapper',
@@ -163,62 +199,53 @@ def main():
             logger.info(" ")
             processed_rest.update(page_restaurants)
             #
-            # while not processed_page:
-            #     without_comments = ["comments" not in processed_rest[rest].keys() for rest in processed_rest].count(True)
-            #     logger.info("Trying to extract comments for -{without_comments}- of total restaurants: -{total}-".format(
-            #         without_comments=without_comments, total=len(processed_rest)))
-            #     aux_results = driver.find_elements_by_class_name("section-result")
-            #     for r in aux_results:
-            #         name = r.text.split("\n")[0]
-            #         if processed_rest.get(name):
-            #             if processed_rest.get(name).get("comments") is None:
-            #                 logger.info("Trying to extract comment for -{restaurant}-".format(restaurant=name))
-            #                 driver.execute_script("arguments[0].click();", r)
-            #                 driver.wait.until(
-            #                     EC.url_changes(driver.current_url)
-            #                 )
-            #                 # driver.implicitly_wait(10)
-            #                 comments_list = driver.find_elements_by_class_name("section-review-text")
-            #                 comments = [elem.text for elem in comments_list]
-            #                 logger.info("Found -{total_comments}- comments for restaurant -{rest_name}-".format(
-            #                     total_comments=len(comments), rest_name=name))
-            #                 processed_rest[name]["comments"] = comments
-            #
-            #                 occupancy_obj = {}
-            #                 occupancy = None
-            #                 try:
-            #                     occupancy = driver.find_element_by_class_name('section-popular-times')
-            #                 except:
-            #                     occupancy = None
-            #
-            #                 if occupancy:
-            #                     days_occupancy_container = occupancy.find_elements_by_xpath(
-            #                         "//div[contains(@class, 'section-popular-times-container')]/div")
-            #                     for d in days_occupancy_container:
-            #                         day = get_day_from_index(d.get_attribute("jsinstance"))
-            #                         occupancy_by_hour = d.find_elements_by_xpath(
-            #                             "div[contains(@class, 'section-popular-times-graph')]/div[contains(@class, 'section-popular-times-bar')]")
-            #                         occupancy_by_hour_values = [o.get_attribute("aria-label") for o in occupancy_by_hour]
-            #                         occupancy_obj[day] = occupancy_by_hour_values
-            #                 processed_rest[name]["occupancy"] = occupancy_obj
-            #                 button_back_to_list = driver.find_element_by_class_name("section-back-to-list-button")
-            #                 driver.execute_script("arguments[0].click();", button_back_to_list)
-            #                 driver.wait.until(
-            #                     EC.url_changes(driver.current_url)
-            #                 )
-            #                 break
-            #             else:
-            #                 logger.info("Comments has been processed for restaurant -{restaurant}-".format(restaurant=name))
-            #         else:
-            #             logger.info(
-            #                 "There are a restaurant that has not been preprocessed -{restaurant}-".format(restaurant=name))
-            #
-            #     total_processed = ["comments" in processed_rest[rest].keys() for rest in processed_rest]
-            #     logger.info(
-            #         "There are -{commented}- restaurante with comments of {total}".format(
-            #             commented=total_processed.count(True),
-            #             total=len(processed_rest)))
-            #     processed_page = all(total_processed) and without_comments == 0
+            while not processed_page:
+                without_comments = ["comments" not in processed_rest[rest].keys() for rest in processed_rest].count(True)
+                logger.info("Trying to extract comments for -{without_comments}- of total restaurants: -{total}-".format(
+                    without_comments=without_comments, total=len(processed_rest)))
+                aux_results = driver.find_elements_by_class_name("section-result")
+                for r in aux_results:
+                    name = r.text.split("\n")[0]
+                    if processed_rest.get(name):
+                        if processed_rest.get(name).get("comments") is None:
+                            logger.info("Trying to extract comment for -{restaurant}-".format(restaurant=name))
+                            driver.execute_script("arguments[0].click();", r)
+                            driver.wait.until(EC.url_changes(driver.current_url))
+
+                            occupancy_obj = get_occupancy(driver)
+                            processed_rest[name]["occupancy"] = occupancy_obj
+
+                            coords_obj = get_info_obj(driver,
+                                                      "//*[@id='pane']/div/div[1]/div/div/div[10]/div/div[1]/span[3]/span[3]")
+                            processed_rest[name]["coordinates"] = coords_obj.text if coords_obj else coords_obj
+
+                            telephone_obj = get_info_obj(driver,
+                                                         "//*[@id='pane']/div/div[1]/div/div/div[12]/div/div[1]/span[3]/span[3]")
+                            processed_rest[name]["telephone_number"] = telephone_obj.text if telephone_obj else telephone_obj
+
+                            openning_obj = get_info_obj(driver, "//*[@id='pane']/div/div[1]/div/div/div[13]/div[3]")
+                            processed_rest[name]["opennig_hours"] = openning_obj.get_attribute("aria-label").split(",") if openning_obj else openning_obj
+
+                            # comments = get_comments(driver)
+                            comments = []
+                            processed_rest[name]["comments"] = comments
+
+                            button_back_to_list = driver.find_element_by_class_name("section-back-to-list-button")
+                            driver.execute_script("arguments[0].click();", button_back_to_list)
+                            driver.wait.until(EC.url_changes(driver.current_url))
+                            break
+                        else:
+                            logger.info("Comments has been processed for restaurant -{restaurant}-".format(restaurant=name))
+                    else:
+                        logger.info(
+                            "There are a restaurant that has not been preprocessed -{restaurant}-".format(restaurant=name))
+
+                total_processed = ["comments" in processed_rest[rest].keys() for rest in processed_rest]
+                logger.info(
+                    "There are -{commented}- restaurante with comments of {total}".format(
+                        commented=total_processed.count(True),
+                        total=len(processed_rest)))
+                processed_page = all(total_processed) and without_comments == 0
 
             next_button = driver.find_element_by_xpath(
                 "//div[@class='gm2-caption']/div/div/button[@jsaction='pane.paginationSection.nextPage']")
@@ -227,7 +254,10 @@ def main():
                 EC.url_changes(driver.current_url)
             )
     except TimeoutException:
-        logging.info("The scraping has finished and there have been {total_rest} found".format(total_rest=len(processed_rest)))
+        logger.info("The scraping has finished and there have been {total_rest} found".format(total_rest=len(processed_rest)))
+    except Exception as e:
+        logger.error("Something went wrong...")
+        logger.error(str(e))
 
     with open('data.json', 'w') as file:
         json.dump(processed_rest, file, ensure_ascii=False)
