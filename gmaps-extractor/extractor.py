@@ -32,6 +32,8 @@ INDEX_TO_DAY = {
     "*6": "sabado"
 }
 
+LAST_REVIEWS_TO_READ = 30
+
 
 def get_day_from_index(idx):
     return INDEX_TO_DAY.get(idx, "unknown")
@@ -112,12 +114,44 @@ def extract_general_info(latest_results, previous_result):
     return processed_rest
 
 
-def get_comments(driver):
+def get_comments(driver, restaurant_name):
     # todo
-    comments_list = driver.find_elements_by_class_name("section-review-text")
-    comments = [elem.text for elem in comments_list]
+    # get all reviews button
+    logging.info("Trying to retrieve comments for restaurant -{rest}-".format(rest=restaurant_name))
+    review_css_class = "section-review-review-content"
+    back_button_xpath = "//*[@id='pane']/div/div[@tabindex='-1']//button[@jsaction='pane.topappbar.back;focus:pane.focusTooltip;blur:pane.blurTooltip']"
+    button_see_all_reviews = get_info_obj(driver, "//*[@id='pane']/div/div[1]/div/div/div/div/div[@jsaction='pane.reviewlist.goToReviews']/button")
+    if button_see_all_reviews:
+        logger.info("all reviews button has been found")
+        # change page to next comments and iterate
+        driver.execute_script("arguments[0].click();", button_see_all_reviews)
+        driver.wait.until(EC.url_changes(driver.current_url))
+        time.sleep(5)
+        aux_reviews = driver.find_elements_by_class_name(review_css_class)
+        have_finished = False
+        while not have_finished:
+            previous_iteration_found = len(aux_reviews)
+            last_review = aux_reviews[-1]
+            driver.execute_script("arguments[0].scrollIntoView(true);", last_review)
+            time.sleep(5)
+            aux_reviews = driver.find_elements_by_class_name(review_css_class)
+            have_finished = previous_iteration_found == len(aux_reviews) or len(aux_reviews) >= LAST_REVIEWS_TO_READ
+        # At this point the last 30 reviews must be shown
+        logger.info("Retrieving comment bucle has finished")
+
+    reviews_elements_list = driver.find_elements_by_class_name(review_css_class)
+    comments = [elem.text for elem in reviews_elements_list]
     logger.info("Found -{total_comments}- comments for restaurant -{rest_name}-".format(
-        total_comments=len(comments), rest_name=name))
+        total_comments=len(comments), rest_name=restaurant_name))
+    back_button = get_info_obj(driver, back_button_xpath)
+    if back_button:
+        # get back to restaurant view
+        driver.execute_script("arguments[0].click();", back_button)
+        driver.wait.until(EC.url_changes(driver.current_url))
+    else:
+        driver.back()
+    time.sleep(5)
+    return comments
 
 
 def get_occupancy(driver):
@@ -216,18 +250,17 @@ def main():
                             processed_rest[name]["occupancy"] = occupancy_obj
 
                             coords_obj = get_info_obj(driver,
-                                                      "//*[@id='pane']/div/div[1]/div/div/div[10]/div/div[1]/span[3]/span[3]")
+                                                      "//*[@id='pane']/div/div[1]/div/div/div[@data-section-id='ol']/div/div[@class='section-info-line']/span[@class='section-info-text']/span[@class='widget-pane-link']")
                             processed_rest[name]["coordinates"] = coords_obj.text if coords_obj else coords_obj
 
                             telephone_obj = get_info_obj(driver,
-                                                         "//*[@id='pane']/div/div[1]/div/div/div[12]/div/div[1]/span[3]/span[3]")
+                                                         "//*[@id='pane']/div/div[1]/div/div/div[@data-section-id='pn0']/div/div[@class='section-info-line']/span/span[@class='widget-pane-link']")
                             processed_rest[name]["telephone_number"] = telephone_obj.text if telephone_obj else telephone_obj
 
                             openning_obj = get_info_obj(driver, "//*[@id='pane']/div/div[1]/div/div/div[13]/div[3]")
                             processed_rest[name]["opennig_hours"] = openning_obj.get_attribute("aria-label").split(",") if openning_obj else openning_obj
 
-                            # comments = get_comments(driver)
-                            comments = []
+                            comments = get_comments(driver, name)
                             processed_rest[name]["comments"] = comments
 
                             button_back_to_list = driver.find_element_by_class_name("section-back-to-list-button")
