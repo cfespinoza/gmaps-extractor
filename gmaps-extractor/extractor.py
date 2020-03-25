@@ -159,7 +159,7 @@ def get_comments(driver, restaurant_name, sleep_time: 5):
             previous_iteration_found = len(aux_reviews)
             last_review = aux_reviews[-1]
             driver.execute_script("arguments[0].scrollIntoView(true);", last_review)
-            time.sleep(5)
+            force_sleep(sleep_time)
             aux_reviews = driver.find_elements_by_class_name(review_css_class)
             have_finished = previous_iteration_found == len(aux_reviews) or len(aux_reviews) >= LAST_REVIEWS_TO_READ
         # At this point the last 30 reviews must be shown
@@ -315,6 +315,8 @@ def scrap_gmaps(driver=None, num_pages=10):
                         except NoSuchElementException:
                             logger.warning(
                                 "Go back button has not been found, trying to get back with 'back' browser button")
+
+                            driver.save_screenshot("no_back_button_found.png")
                             driver.back()
                         force_sleep(sleep_l)
                     else:
@@ -339,9 +341,11 @@ def scrap_gmaps(driver=None, num_pages=10):
         except TimeoutException:
             logger.info("The scraping has finished and there have been {total_rest} found".format(
                 total_rest=len(processed_rest)))
+            driver.save_screenshot("timeout_exception.png")
         except Exception as e:
             logger.error("Something went wrong...")
             logger.error(str(e))
+            driver.save_screenshot("total_exception.png")
     else:
         return processed_rest
 
@@ -379,7 +383,7 @@ def main():
     logger.info("Formatted url: {}".format(url))
     driver.get(url)
     driver.set_page_load_timeout(20)
-    processed_rest = scrap_gmaps(driver, 5)
+    processed_rest = scrap_gmaps(driver, 10)
 
     with open('data.json', 'w') as file:
         json.dump(processed_rest, file, ensure_ascii=False)
