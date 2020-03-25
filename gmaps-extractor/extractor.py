@@ -74,6 +74,28 @@ def get_driver(driver_location):
     driver.implicitly_wait(1)
     return driver
 
+def get_basic_info(single_rest_result):
+    r_description_arr = single_rest_result.text.split("\n")
+    name = r_description_arr[0]
+    logger.info(" ")
+    logger.info("Restaurant found -{name}-".format(name=name))
+    mean_score = total_scores = None
+    try:
+        mean_score, total_scores = get_score_info(r_description_arr[1])
+    except:
+        mean_score = None,
+        total_scores = None
+
+    address = r_description_arr[2] if len(r_description_arr) > 2 else None
+    schedule = r_description_arr[3] if len(r_description_arr) > 3 else None
+    return {
+        "name": name,
+        "score": mean_score,
+        "total_scores": total_scores,
+        "address": address,
+        "schedule": schedule
+    }
+
 def extract_general_info(latest_results, previous_result):
     processed_rest = {}
     for r in latest_results:
@@ -115,7 +137,6 @@ def extract_general_info(latest_results, previous_result):
 
 
 def get_comments(driver, restaurant_name):
-    # todo
     # get all reviews button
     logging.info("Trying to retrieve comments for restaurant -{rest}-".format(rest=restaurant_name))
     review_css_class = "section-review-review-content"
@@ -232,6 +253,7 @@ def main():
                     page_restaurants)))
             logger.info(" ")
             processed_rest.update(page_restaurants)
+            processed_rest_list = {}
             #
             while not processed_page:
                 without_comments = ["comments" not in processed_rest[rest].keys() for rest in processed_rest].count(True)
@@ -240,6 +262,7 @@ def main():
                 aux_results = driver.find_elements_by_class_name("section-result")
                 for r in aux_results:
                     name = r.text.split("\n")[0]
+                    processed_rest_list[name] = True
                     if processed_rest.get(name):
                         if processed_rest.get(name).get("comments") is None:
                             logger.info("Trying to extract comment for -{restaurant}-".format(restaurant=name))
@@ -257,42 +280,49 @@ def main():
                                                          "//*[@id='pane']/div/div[1]/div/div/div[@data-section-id='pn0']/div/div[@class='section-info-line']/span/span[@class='widget-pane-link']")
                             processed_rest[name]["telephone_number"] = telephone_obj.text if telephone_obj else telephone_obj
 
-                            openning_obj = get_info_obj(driver, "//*[@id='pane']/div/div[1]/div/div/div[13]/div[3]")
+                            openning_obj = get_info_obj(driver, "//*[@id='pane']/div/div[1]/div/div/div[@jsaction='pane.info.dropdown;keydown:pane.info.dropdown;focus:pane.focusTooltip;blur:pane.blurTooltip;']/div[3]")
                             processed_rest[name]["opennig_hours"] = openning_obj.get_attribute("aria-label").split(",") if openning_obj else openning_obj
 
                             comments = get_comments(driver, name)
                             processed_rest[name]["comments"] = comments
-
-                            button_back_to_list = driver.find_element_by_class_name("section-back-to-list-button")
-                            driver.execute_script("arguments[0].click();", button_back_to_list)
-                            driver.wait.until(EC.url_changes(driver.current_url))
+                            try:
+                                button_back_to_list = driver.find_element_by_class_name("section-back-to-list-button")
+                                driver.execute_script("arguments[0].click();", button_back_to_list)
+                                driver.wait.until(EC.url_changes(driver.current_url))
+                            except NoSuchElementException:
+                                logger.warning("Go back button has not been found... trying to get back with 'back' browser button")
+                                driver.back()
+                                time.sleep(5)
                             break
                         else:
                             logger.info("Comments has been processed for restaurant -{restaurant}-".format(restaurant=name))
                     else:
                         logger.info(
                             "There are a restaurant that has not been preprocessed -{restaurant}-".format(restaurant=name))
+                        processed_rest[name] = {
+                            "comments": []
+                        }
+                        break
 
                 total_processed = ["comments" in processed_rest[rest].keys() for rest in processed_rest]
                 logger.info(
                     "There are -{commented}- restaurante with comments of {total}".format(
                         commented=total_processed.count(True),
                         total=len(processed_rest)))
-                processed_page = all(total_processed) and without_comments == 0
+                # processed_page = all(total_processed) or len(processed_rest_list) == len(aux_results)
+                processed_page = all(total_processed) or len(processed_rest_list) >= len(aux_results) or len(aux_results) == 0
 
             next_button = driver.find_element_by_xpath(
                 "//div[@class='gm2-caption']/div/div/button[@jsaction='pane.paginationSection.nextPage']")
             driver.execute_script("arguments[0].click();", next_button)
-            driver.wait.until(
-                EC.url_changes(driver.current_url)
-            )
+            driver.wait.until(EC.url_changes(driver.current_url))
     except TimeoutException:
         logger.info("The scraping has finished and there have been {total_rest} found".format(total_rest=len(processed_rest)))
     except Exception as e:
         logger.error("Something went wrong...")
         logger.error(str(e))
 
-    with open('data.json', 'w') as file:
+    with open('data.ori.json', 'w') as file:
         json.dump(processed_rest, file, ensure_ascii=False)
 
     driver.quit()
