@@ -247,6 +247,9 @@ def scrap_gmaps(driver=None, num_pages=10):
     coords_xpath_selector = "//*[@id='pane']/div/div[1]/div/div/div[@data-section-id='ol']/div/div[@class='section-info-line']/span[@class='section-info-text']/span[@class='widget-pane-link']"
     telephone_xpath_selector = "//*[@id='pane']/div/div[1]/div/div/div[@data-section-id='pn0']/div/div[@class='section-info-line']/span/span[@class='widget-pane-link']"
     openning_hours_xpath_selector = "//*[@id='pane']/div/div[1]/div/div/div[@jsaction='pane.info.dropdown;keydown:pane.info.dropdown;focus:pane.focusTooltip;blur:pane.blurTooltip;']/div[3]"
+    back_button_xpath = "//*[@id='pane']/div/div/div[@class='widget-pane-content-holder']/div/button"
+    all_reviews_back_button_xpath = "//*[@id='pane']/div/div[@tabindex='-1']//button[@jsaction='pane.topappbar.back;focus:pane.focusTooltip;blur:pane.blurTooltip']"
+    next_button_xpath = "//div[@class='gm2-caption']/div/div/button[@jsaction='pane.paginationSection.nextPage']"
     sleep_xs = 2
     sleep_m = 5
     sleep_l = 10
@@ -308,16 +311,26 @@ def scrap_gmaps(driver=None, num_pages=10):
                         # udpating flags
                         aux_processed_restaurants[restaurant_name] = True
                         page_processed_restaurantes[restaurant_name] = restaurant_basic_info
-                        try:
-                            button_back_to_list = driver.find_element_by_class_name("section-back-to-list-button")
-                            driver.execute_script("arguments[0].click();", button_back_to_list)
-                            driver.wait.until(EC.url_changes(driver.current_url))
-                        except NoSuchElementException:
-                            logger.warning(
-                                "Go back button has not been found, trying to get back with 'back' browser button")
 
-                            driver.save_screenshot("no_back_button_found.png")
-                            driver.back()
+                        # Try to go back
+                        back_from_details_layout = get_info_obj(driver, back_button_xpath) # driver.find_element_by_class_name("section-back-to-list-button")
+                        back_from_reviews_layout = get_info_obj(driver, all_reviews_back_button_xpath)
+
+                        if back_from_reviews_layout:
+                            logger.info("Going back from reviews layout")
+                            driver.execute_script("arguments[0].click();", back_from_reviews_layout)
+                            driver.wait.until(EC.url_changes(driver.current_url))
+                            force_sleep(sleep_l)
+                            back_from_details_layout = get_info_obj(driver, back_button_xpath)
+
+                        if back_from_details_layout:
+                            logger.info("Going back from details layout")
+                            driver.execute_script("arguments[0].click();", back_from_details_layout)
+                            driver.wait.until(EC.url_changes(driver.current_url))
+                        else:
+                            logger.warning("There is not found any back button in details layout")
+                            driver.save_screenshot("no_back_button_found_{ts}.png".format(ts=int(time.time())))
+
                         force_sleep(sleep_l)
                     else:
                         # find_next_restaurant has returned 'None' due to all restaurants for current page
@@ -327,8 +340,7 @@ def scrap_gmaps(driver=None, num_pages=10):
                     iteration_number += 1
 
                 processed_rest.update(page_processed_restaurantes)
-                next_button = driver.find_element_by_xpath(
-                    "//div[@class='gm2-caption']/div/div/button[@jsaction='pane.paginationSection.nextPage']")
+                next_button = driver.find_element_by_xpath(next_button_xpath)
                 driver.execute_script("arguments[0].click();", next_button)
                 driver.wait.until(EC.url_changes(driver.current_url))
                 force_sleep(sleep_m)
