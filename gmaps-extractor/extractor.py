@@ -269,6 +269,7 @@ def scrap_gmaps(driver=None, num_pages=10):
                 iteration_number = 0
                 should_exit = False
                 while not should_exit:
+                    iteration_init_time = time.time()
                     logger.info("Starting iteration -{num_it}- in while bucle".format(num_it=iteration_number))
                     page_restaurants = driver.find_elements_by_xpath(
                         "//div[contains(@class, 'section-result-content')]")
@@ -338,6 +339,10 @@ def scrap_gmaps(driver=None, num_pages=10):
                         should_exit = True
 
                     iteration_number += 1
+                    iteration_end_time = time.time()
+                    it_elapsed_process_time = int(iteration_end_time - iteration_init_time)
+                    logger.info(" => A single iteration has took: -{elapsed_time}- seconds".format(
+                        elapsed_time=it_elapsed_process_time))
 
                 processed_rest.update(page_processed_restaurantes)
                 next_button = driver.find_element_by_xpath(next_button_xpath)
@@ -346,12 +351,12 @@ def scrap_gmaps(driver=None, num_pages=10):
                 force_sleep(sleep_m)
                 end_page_time = time.time()
                 process_time = int(end_page_time - init_page_time)
-                logger.info("Page number: -{page}-. Has been processed in: -{process_time}-".format(
-                    page=n_page, process_time=process_time))
+                logger.info(" => Page number: -{page}-. Has been processed in: -{elapsed_time}- seconds".format(
+                    page=n_page, elapsed_time=process_time))
                 total_time += process_time
 
         except TimeoutException:
-            logger.info("The scraping has finished and there have been {total_rest} found".format(
+            logger.warning("The scraping has finished and there have been {total_rest} found".format(
                 total_rest=len(processed_rest)))
             driver.save_screenshot("timeout_exception.png")
         except Exception as e:
@@ -361,7 +366,7 @@ def scrap_gmaps(driver=None, num_pages=10):
     else:
         return processed_rest
 
-    logger.info("Process gmaps has took: -{total_time}- seconds".format(total_time=total_time))
+    logger.info(" => Process gmaps has took: -{elapsed_time}- seconds".format(elapsed_time=total_time))
     return processed_rest
 
 
