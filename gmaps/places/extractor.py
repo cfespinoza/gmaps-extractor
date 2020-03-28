@@ -1,0 +1,158 @@
+import logging
+import time
+
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
+
+from gmaps.abstract.extractor import AbstractGMapsExtractor
+from selenium.webdriver.support import expected_conditions as ec
+
+
+class PlacesExtractor(AbstractGMapsExtractor):
+
+    def __init__(self, driver_location: None, url: None, place_name: None, num_reviews: None):
+        super().__init__(driver_location)
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self._place_name = place_name
+        self._url = url
+        self._num_reviews = num_reviews
+        self._INDEX_TO_DAY = {
+            "0": "domingo",
+            "*0": "domingo",
+            "1": "lunes",
+            "*1": "lunes",
+            "2": "martes",
+            "*2": "martes",
+            "3": "miercoles",
+            "*3": "miercoles",
+            "4": "jueves",
+            "*4": "jueves",
+            "5": "viernes",
+            "*5": "viernes",
+            "6": "sabado",
+            "*6": "sabado"
+        }
+        self._coords_xpath_selector = "//*[@id='pane']/div/div[1]/div/div/div[@data-section-id='ol']/div/div[@class='section-info-line']/span[@class='section-info-text']/span[@class='widget-pane-link']"
+        self._telephone_xpath_selector = "//*[@id='pane']/div/div[1]/div/div/div[@data-section-id='pn0']/div/div[@class='section-info-line']/span/span[@class='widget-pane-link']"
+        self._openning_hours_xpath_selector = "//*[@id='pane']/div/div[1]/div/div/div[@jsaction='pane.info.dropdown;keydown:pane.info.dropdown;focus:pane.focusTooltip;blur:pane.blurTooltip;']/div[3]"
+        self._back_button_xpath = "//*[@id='pane']/div/div/div[@class='widget-pane-content-holder']/div/button"
+        self._all_reviews_back_button_xpath = "//*[@id='pane']/div/div[@tabindex='-1']//button[@jsaction='pane.topappbar.back;focus:pane.focusTooltip;blur:pane.blurTooltip']"
+        self._occupancy_by_hours_xpath = "div[contains(@class, 'section-popular-times-graph')]/div[contains(@class, 'section-popular-times-bar')]"
+        self._place_name_xpath = "//*[@id='pane']/div/div[@tabindex='-1']/div/div//h1"
+        self._place_score_xpath = "//*[@id='pane']/div/div[@tabindex='-1']//span[@class='section-star-display']"
+        self._occupancy_container_elements_xpath_query = "//div[contains(@class, 'section-popular-times-container')]/div"
+        self._total_votes_xpath = "//*[@id='pane']/div/div[@tabindex='-1']/div/div/div[@class='section-hero-header-title']//span[@class='section-rating-term-list']//button"
+        self._address_xpath = "//*[@id='pane']/div/div[@tabindex='-1']/div/div/div[@data-section-id='ad']//span[@class='widget-pane-link']"
+        self._see_all_reviews_button = "//*[@id='pane']/div/div[1]/div/div/div/div/div[@jsaction='pane.reviewlist.goToReviews']/button"
+        self._review_css_class = "section-review-review-content"
+
+        self.auto_boot()
+
+    def _get_day_from_index(self, idx):
+        return self._INDEX_TO_DAY.get(idx, "unknown")
+
+    def _get_occupancy(self):
+        driver = self.get_driver()
+        occupancy = None
+        occupancy_obj = {}
+        try:
+            occupancy = driver.find_element_by_class_name('section-popular-times')
+            if occupancy:
+                days_occupancy_container = occupancy.find_elements_by_xpath(
+                    self._occupancy_container_elements_xpath_query)
+                for d in days_occupancy_container:
+                    day = self._get_day_from_index(d.get_attribute("jsinstance"))
+                    occupancy_by_hour = d.find_elements_by_xpath(self._occupancy_by_hours_xpath)
+                    occupancy_by_hour_values = [o.get_attribute("aria-label") for o in occupancy_by_hour]
+                    occupancy_obj[day] = occupancy_by_hour_values
+        except NoSuchElementException:
+            self.logger.warning("there is no occupancy elements")
+            occupancy = None
+        return occupancy_obj
+
+    def _get_place_info(self):
+        place_info_obj = {}
+        name_obj = self.get_info_obj(self._place_name_xpath)
+        # extract basic info
+        # "score": "4,4", "total_scores"
+        score_obj = self.get_info_obj(self._place_score_xpath)
+        total_score_obj = self.get_info_obj(self._total_votes_xpath)
+        address_obj = self.get_info_obj(self._address_xpath)
+        coords_obj = self.get_info_obj(self._coords_xpath_selector)
+        telephone_obj = self.get_info_obj(self._telephone_xpath_selector)
+        openning_obj = self.get_info_obj(self._openning_hours_xpath_selector)
+        occupancy_obj = self._get_occupancy()
+        comments_liss = self._get_comments(self._place_name, self.sleep_l)
+
+        return {
+            "name": name_obj.text if name_obj else self._place_name,
+            "score": score_obj.text if score_obj else score_obj,
+            "total_scores": total_score_obj.text if total_score_obj else total_score_obj,
+            "address": address_obj.text if address_obj else address_obj,
+            "occupancy": occupancy_obj,
+            "coordinates": coords_obj.text if coords_obj else coords_obj,
+            "telephone_number": telephone_obj.text if telephone_obj else telephone_obj,
+            "opennig_hours": openning_obj.get_attribute("aria-label").split(
+                ",") if openning_obj else openning_obj,
+            "comments": comments_liss
+        }
+        # extract comments
+        # place_info_obj["comments"] = self._get_comments(restaurant_name, sleep_l)
+
+    def scrap(self):
+        driver = self.get_driver()
+        init_time = time.time()
+        driver.get(self._url)
+        place_info = None
+        try:
+            driver.wait.until(ec.url_changes(self._url))
+            place_info = self._get_place_info()
+            self.logger.info("info retrieved for place -{name}-: {info}".format(name=self._place_name,
+                                                                                info=place_info))
+        except TimeoutException:
+            self.logger.warning("timeout exception waiting for place -{place}- in url: -{url}-".format(
+                place=self._place_name,
+                url=self._url)
+            )
+            # todo
+            # # basic info
+            # restaurant_name = restaurant_basic_info.get("name", "UNKNOWN")
+            # self.logger.info("Basic info found for: -{name}-".format(
+            #     name=restaurant_basic_info.get("name", "UNKNOWN")))
+            # # accessing to extract detailed info for 'restaurant'
+            # driver.execute_script("arguments[0].click();", restaurant)
+        self.finish()
+        end_time = time.time()
+        elapsed = int(end_time - init_time)
+        self.logger.info("process the place -{name}- has took: -{elapsed}- seconds".format(name=self._place_name,
+                                                                                           elapsed=elapsed))
+        return {self._place_name: place_info}
+
+    def _get_comments(self, place_name: None, sleep_time: None):
+        # get all reviews button
+        driver = self.get_driver()
+        self.logger.info("trying to retrieve comments for place -{place}-".format(place=place_name))
+        button_see_all_reviews = self.get_info_obj(self._see_all_reviews_button)
+        reviews_elements_list = driver.find_elements_by_class_name(self._review_css_class)
+        if len(reviews_elements_list) < self._num_reviews and button_see_all_reviews:
+            self.logger.info("all reviews button has been found")
+            # change page to next comments and iterate
+            driver.execute_script("arguments[0].click();", button_see_all_reviews)
+            driver.wait.until(ec.url_changes(driver.current_url))
+            self.force_sleep(sleep_time)
+            aux_reviews = driver.find_elements_by_class_name(self._review_css_class)
+            have_finished = False
+            while not have_finished:
+                previous_iteration_found = len(aux_reviews)
+                last_review = aux_reviews[-1]
+                driver.execute_script("arguments[0].scrollIntoView(true);", last_review)
+                self.force_sleep(sleep_time)
+                aux_reviews = driver.find_elements_by_class_name(self._review_css_class)
+                have_finished = previous_iteration_found == len(aux_reviews) or len(aux_reviews) >= self._num_reviews
+            # At this point the last 30 reviews must be shown
+            self.logger.info("retrieving comment bucle has finished")
+
+        reviews_elements_list = driver.find_elements_by_class_name(self._review_css_class)
+        comments = [elem.text for elem in reviews_elements_list]
+        self.logger.info("found -{total_reviews}- comments for restaurant -{place_name}-".format(
+            total_reviews=len(comments), place_name=place_name))
+        return comments
