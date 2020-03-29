@@ -10,7 +10,7 @@ class ResultsExtractor(AbstractGMapsExtractor):
 
     def __init__(self, driver_location: None, country: None, postal_code: None,
                  places_types: None, num_pages: None):
-        super().__init__(driver_location)
+        super().__init__(driver_location, output_config=None)
         self.logger = logging.getLogger(self.__class__.__name__)
         self._places_types = "+".join(places_types)
         self._country = country

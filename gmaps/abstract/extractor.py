@@ -8,7 +8,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 class AbstractGMapsExtractor:
 
-    def __init__(self, driver_location: None):
+    def __init__(self, driver_location: None, output_config: None):
         super(AbstractGMapsExtractor, self).__init__()
         self.logger = logging.getLogger(self.__class__.__name__)
         self._default_driver_args = ["--disable-extensions", "--disable-gpu", "start-maximized",
@@ -24,6 +24,8 @@ class AbstractGMapsExtractor:
         self.sleep_m = 5
         self.sleep_l = 10
         self.sleep_xl = 20
+        self._output_config = output_config
+        self._writer = None
 
     def _get_driver_config(self, driver_arguments=None, experimental_arguments=None):
         chrome_options = webdriver.ChromeOptions()
@@ -60,6 +62,11 @@ class AbstractGMapsExtractor:
             self._driver.quit()
         else:
             self.logger.warning("there is no any driver to shut down")
+        if self._writer:
+            self._writer.finish()
+        else:
+            self.logger.debug("there is no any writer to shut down")
+
 
     def get_info_obj(self, xpath_query, external_driver=None):
         element = None
@@ -81,6 +88,12 @@ class AbstractGMapsExtractor:
     def get_obj_text(self, xpath_query, external_driver=None):
         obj = self.get_info_obj(xpath_query, external_driver)
         return obj.text if obj else obj
+
+    def export_data(self, data):
+        if self._writer:
+            self._writer.write(data)
+        else:
+            return data
 
     def scrap(self):
         raise NotImplementedError("Method must be implemented in subclass")

@@ -7,11 +7,14 @@ from selenium.common.exceptions import TimeoutException, NoSuchElementException,
 from gmaps.abstract.extractor import AbstractGMapsExtractor
 from selenium.webdriver.support import expected_conditions as ec
 
+from gmaps.places.writer import MySqlWriter
+
 
 class PlacesExtractor(AbstractGMapsExtractor):
 
-    def __init__(self, driver_location: None, url: None, place_name: None, num_reviews: None):
-        super().__init__(driver_location)
+    def __init__(self, driver_location: None, url: None, place_name: None, num_reviews: None, output_config: None,
+                 postal_code: None, extraction_date: None):
+        super().__init__(driver_location, output_config)
         self.logger = logging.getLogger(self.__class__.__name__)
         self._place_name = place_name
         self._url = url
@@ -44,22 +47,32 @@ class PlacesExtractor(AbstractGMapsExtractor):
         self._total_votes_xpath = "//*[@id='pane']/div/div[@tabindex='-1']/div/div/div[@class='section-hero-header-title']//span[@class='section-rating-term-list']//button"
         self._address_xpath = "//*[@id='pane']/div/div[@tabindex='-1']/div/div/div[@data-section-id='ad']//span[@class='widget-pane-link']"
         self._see_all_reviews_button = "//*[@id='pane']/div/div[1]/div/div/div/div/div[@jsaction='pane.reviewlist.goToReviews']/button"
+        self._price_range = "//*[@id='pane']/div/div[1]/div/div/div[2]/div[1]/div[2]/div/div[1]/span[2]/span/span[2]/span[2]/span[1]/span[@role='text']"
+        self._premise_type = "//*[@id='pane']/div/div[1]//button[@jsaction='pane.rating.category']"
+        self._style = "//*[@id='pane']/div/div[1]/div/div/jsl/button/div//div[@class='section-editorial-attributes-summary']"
         self._review_css_class = "section-review-review-content"
         self._thread_local = threading.local()
         self._thread_driver_id = "{classname}_{place}_driver".format(classname=self.__class__.__name__,
                                                                      place=self._place_name)
+        self._postal_code = postal_code
+        self._extraction_date = extraction_date
+        self._output_config = output_config
         self.auto_boot()
+
+    def boot_writer(self):
+        if self._output_config:
+            self._writer = MySqlWriter(self._output_config)
 
     def set_driver(self, driver):
         self._driver = driver
         setattr(self._thread_local, self._thread_driver_id, self._driver)
 
-    def _auto_boot(self):
+    def auto_boot(self):
         self.logger.info("overwrite 'auto_boot' function")
-        driver_options = super()._get_driver_config()
-        self._driver = super()._build_driver(provided_driver_location=self._driver_location,
-                                             driver_options=driver_options)
-        setattr(self._thread_local, self._thread_driver_id, self._driver)
+        super().auto_boot()
+        self.logger.info("booting writer")
+        self.boot_writer()
+        self.logger.info("writer booted")
 
     def _get_day_from_index(self, idx):
         return self._INDEX_TO_DAY.get(idx, "unknown")
@@ -93,9 +106,12 @@ class PlacesExtractor(AbstractGMapsExtractor):
         coords_obj = self.get_obj_text(xpath_query=self._coords_xpath_selector, external_driver=driver)
         telephone_obj = self.get_obj_text(xpath_query=self._telephone_xpath_selector, external_driver=driver)
         opening_obj = self.get_info_obj(xpath_query=self._openning_hours_xpath_selector, external_driver=driver)
+        price_range = self.get_obj_text(xpath_query=self._price_range, external_driver=driver)
+        style = self.get_obj_text(xpath_query=self._style, external_driver=driver)
+        premise_type = self.get_obj_text(xpath_query=self._premise_type, external_driver=driver)
         opening_value = opening_obj.get_attribute("aria-label").split(",") if opening_obj else opening_obj,
         occupancy_obj = self._get_occupancy(external_driver=driver)
-        comments_liss = self._get_comments(self._place_name, self.sleep_m, external_driver=driver)
+        comments_list = self._get_comments(self._place_name, self.sleep_m, external_driver=driver)
         place_info = {
             "name": name_obj,
             "score": score_obj,
@@ -105,7 +121,13 @@ class PlacesExtractor(AbstractGMapsExtractor):
             "coordinates": coords_obj,
             "telephone_number": telephone_obj,
             "opennig_hours": opening_value,
-            "comments": comments_liss
+            "comments": comments_list,
+            "zip_code": self._postal_code,
+            "date": self._extraction_date,
+            "price_range": price_range,
+            "style": style,
+            "premise_type": premise_type,
+            "extractor_url": self._url
         }
         self.logger.info("info retrieved for place -{name}-: {info}".format(name=self._place_name,
                                                                             info=place_info))
@@ -183,10 +205,12 @@ class PlacesExtractor(AbstractGMapsExtractor):
         init_time = time.time()
         driver.get(self._url)
         place_info = None
+        result_to_return = None
         try:
             driver.wait.until(ec.url_changes(self._url))
             self.force_sleep(self.sleep_m)
             place_info = self._get_place_info(provided_driver=driver)
+            result_to_return = self.export_data(place_info)
         except TimeoutException as te:
             self.logger.warning("{exception} - timeout exception waiting for place -{place}- in url: -{url}-".format(
                 place=self._place_name,
@@ -195,6 +219,7 @@ class PlacesExtractor(AbstractGMapsExtractor):
             ))
             self.logger.warning("forcing to look up information again")
             place_info = self._scrap(provided_driver=driver)
+            result_to_return = self.export_data(place_info)
         except StaleElementReferenceException as sere:
             self.logger.warning(
                 "{exception} - stale element reference detected during reviews extraction: -{name}- and -{url}-".format(
@@ -205,6 +230,7 @@ class PlacesExtractor(AbstractGMapsExtractor):
             self.force_sleep(self.sleep_m)
             self.logger.warning("forcing to look up information again")
             place_info = self._scrap(provided_driver=driver)
+            result_to_return = self.export_data(place_info)
         except Exception as e:
             self.logger.error("error during reviews extraction: {}".format(str(e)))
         finally:
@@ -216,4 +242,4 @@ class PlacesExtractor(AbstractGMapsExtractor):
                                                                                            elapsed=elapsed))
         logging.info("scrap process for place -{name}- with url -{url}- is finishing".format(
             name=self._place_name, url=self._url))
-        return {self._place_name: place_info}
+        return result_to_return

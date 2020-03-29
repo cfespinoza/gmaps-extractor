@@ -102,6 +102,7 @@ if __name__ == "__main__":
             price_range VARCHAR(5),
             style VARCHAR(20),
             address VARCHAR(40) NOT NULL,
+            date DATE NOT NULL,
             PRIMARY KEY(ID)
         )
     """
