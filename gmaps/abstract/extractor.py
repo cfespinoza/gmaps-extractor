@@ -78,6 +78,9 @@ class AbstractGMapsExtractor:
         self._driver = self._build_driver(provided_driver_location=self._driver_location,
                                           driver_options=self._driver_options)
 
+    def get_obj_text(self, xpath_query, external_driver=None):
+        obj = self.get_info_obj(xpath_query, external_driver)
+        return obj.text if obj else obj
 
     def scrap(self):
         raise NotImplementedError("Method must be implemented in subclass")

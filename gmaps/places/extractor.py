@@ -54,25 +54,18 @@ class PlacesExtractor(AbstractGMapsExtractor):
         self._driver = driver
         setattr(self._thread_local, self._thread_driver_id, self._driver)
 
-    def auto_boot(self):
+    def _auto_boot(self):
         self.logger.info("overwrite 'auto_boot' function")
         driver_options = super()._get_driver_config()
         self._driver = super()._build_driver(provided_driver_location=self._driver_location,
                                              driver_options=driver_options)
         setattr(self._thread_local, self._thread_driver_id, self._driver)
 
-    def _get_place_driver(self):
-        driver = getattr(self._thread_local, self._thread_driver_id, None)
-        if driver:
-            self.logger.info("driver with id -{id}- found".format(id=self._thread_driver_id))
-            return driver
-        return self._driver
-
     def _get_day_from_index(self, idx):
         return self._INDEX_TO_DAY.get(idx, "unknown")
 
     def _get_occupancy(self, external_driver=None):
-        driver = external_driver if external_driver else self._get_place_driver()
+        driver = external_driver if external_driver else self.get_driver()
         occupancy = None
         occupancy_obj = {}
         try:
@@ -86,31 +79,32 @@ class PlacesExtractor(AbstractGMapsExtractor):
                     occupancy_by_hour_values = [o.get_attribute("aria-label") for o in occupancy_by_hour]
                     occupancy_obj[day] = occupancy_by_hour_values
         except NoSuchElementException:
-            self.logger.warning("there is no occupancy elements")
+            self.logger.warning("there is no occupancy elements for -{name}-: {url}".format(name=self._place_name,
+                                                                                            url=self._url))
         return occupancy_obj
 
-    def _get_place_info(self, external_driver=None):
-        driver = external_driver if external_driver else self._get_place_driver()
-        name_obj = self.get_info_obj(xpath_query=self._place_name_xpath, external_driver=driver)
+    def _get_place_info(self, provided_driver=None):
+        driver = provided_driver if provided_driver else self.get_driver()
+        name_obj = self.get_obj_text(xpath_query=self._place_name_xpath, external_driver=driver)
         # extract basic info
-        score_obj = self.get_info_obj(xpath_query=self._place_score_xpath, external_driver=driver)
-        total_score_obj = self.get_info_obj(xpath_query=self._total_votes_xpath, external_driver=driver)
-        address_obj = self.get_info_obj(xpath_query=self._address_xpath, external_driver=driver)
-        coords_obj = self.get_info_obj(xpath_query=self._coords_xpath_selector, external_driver=driver)
-        telephone_obj = self.get_info_obj(xpath_query=self._telephone_xpath_selector, external_driver=driver)
-        openning_obj = self.get_info_obj(xpath_query=self._openning_hours_xpath_selector, external_driver=driver)
+        score_obj = self.get_obj_text(xpath_query=self._place_score_xpath, external_driver=driver)
+        total_score_obj = self.get_obj_text(xpath_query=self._total_votes_xpath, external_driver=driver)
+        address_obj = self.get_obj_text(xpath_query=self._address_xpath, external_driver=driver)
+        coords_obj = self.get_obj_text(xpath_query=self._coords_xpath_selector, external_driver=driver)
+        telephone_obj = self.get_obj_text(xpath_query=self._telephone_xpath_selector, external_driver=driver)
+        opening_obj = self.get_info_obj(xpath_query=self._openning_hours_xpath_selector, external_driver=driver)
+        opening_value = opening_obj.get_attribute("aria-label").split(",") if opening_obj else opening_obj,
         occupancy_obj = self._get_occupancy(external_driver=driver)
         comments_liss = self._get_comments(self._place_name, self.sleep_m, external_driver=driver)
         place_info = {
-            "name": name_obj.text if name_obj else self._place_name,
-            "score": score_obj.text if score_obj else score_obj,
-            "total_scores": total_score_obj.text if total_score_obj else total_score_obj,
-            "address": address_obj.text if address_obj else address_obj,
+            "name": name_obj,
+            "score": score_obj,
+            "total_scores": total_score_obj,
+            "address": address_obj,
             "occupancy": occupancy_obj,
-            "coordinates": coords_obj.text if coords_obj else coords_obj,
-            "telephone_number": telephone_obj.text if telephone_obj else telephone_obj,
-            "opennig_hours": openning_obj.get_attribute("aria-label").split(
-                ",") if openning_obj else openning_obj,
+            "coordinates": coords_obj,
+            "telephone_number": telephone_obj,
+            "opennig_hours": opening_value,
             "comments": comments_liss
         }
         self.logger.info("info retrieved for place -{name}-: {info}".format(name=self._place_name,
@@ -119,7 +113,7 @@ class PlacesExtractor(AbstractGMapsExtractor):
 
     def _get_comments(self, place_name: None, sleep_time: None, external_driver=None):
         # get all reviews button
-        driver = external_driver if external_driver else self._get_place_driver()
+        driver = external_driver if external_driver else self.get_driver()
         self.logger.info("trying to retrieve comments for place -{place}-".format(place=place_name))
         button_see_all_reviews = self.get_info_obj(self._see_all_reviews_button)
         reviews_elements_list = driver.find_elements_by_class_name(self._review_css_class)
@@ -147,9 +141,8 @@ class PlacesExtractor(AbstractGMapsExtractor):
             total_reviews=len(comments), place_name=place_name))
         return comments
 
-
     def _scrap(self, provided_driver=None):
-        driver = provided_driver if provided_driver else self._get_place_driver()
+        driver = provided_driver if provided_driver else self.get_driver()
         place_info = {}
         try:
             page_elements = driver.find_elements_by_xpath(self.shared_result_elements_xpath_query)
@@ -160,7 +153,7 @@ class PlacesExtractor(AbstractGMapsExtractor):
                 driver.execute_script("arguments[0].click();", found_place)
                 driver.wait.until(ec.url_changes(driver.current_url))
                 self.force_sleep(self.sleep_m)
-                place_info = self._get_place_info(external_driver=driver)
+                place_info = self._get_place_info(provided_driver=driver)
             else:
                 self.logger.warning("place was not found in search list. There is something wrong with: {name}".format(
                     name=self._place_name))
@@ -186,19 +179,32 @@ class PlacesExtractor(AbstractGMapsExtractor):
     def scrap(self, provided_driver=None):
         logging.info("scrap process for place -{name}- with url -{url}- is starting".format(
             name=self._place_name, url=self._url))
-        driver = provided_driver if provided_driver else self._get_place_driver()
+        driver = provided_driver if provided_driver else self.get_driver()
         init_time = time.time()
         driver.get(self._url)
         place_info = None
         try:
             driver.wait.until(ec.url_changes(self._url))
-            place_info = self._get_place_info(external_driver=driver)
-        except TimeoutException:
-            self.logger.warning("timeout exception waiting for place -{place}- in url: -{url}-".format(
+            self.force_sleep(self.sleep_m)
+            place_info = self._get_place_info(provided_driver=driver)
+        except TimeoutException as te:
+            self.logger.warning("{exception} - timeout exception waiting for place -{place}- in url: -{url}-".format(
                 place=self._place_name,
-                url=self._url)
-            )
-            place_info = self._scrap(driver)
+                url=self._url,
+                exception=str(te)
+            ))
+            self.logger.warning("forcing to look up information again")
+            place_info = self._scrap(provided_driver=driver)
+        except StaleElementReferenceException as sere:
+            self.logger.warning(
+                "{exception} - stale element reference detected during reviews extraction: -{name}- and -{url}-".format(
+                    exception=str(sere),
+                    name=self._place_name,
+                    url=self._url
+                ))
+            self.force_sleep(self.sleep_m)
+            self.logger.warning("forcing to look up information again")
+            place_info = self._scrap(provided_driver=driver)
         except Exception as e:
             self.logger.error("error during reviews extraction: {}".format(str(e)))
         finally:

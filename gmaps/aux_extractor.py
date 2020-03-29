@@ -10,10 +10,10 @@ from gmaps.places.extractor import PlacesExtractor
 from gmaps.results.extractor import ResultsExtractor
 
 
-def scrape_place(args):
+def scrape_place(parameters):
     # [[#name #url #driver_location #num_reviews ]]
-    scraper = PlacesExtractor(driver_location=args[2],
-                              url=args[1], place_name=args[0], num_reviews=args[3])
+    scraper = PlacesExtractor(driver_location=parameters[2],
+                              url=parameters[1], place_name=parameters[0], num_reviews=parameters[3])
     scraped_info = scraper.scrap()
     return scraped_info
 
@@ -21,6 +21,7 @@ def scrape_place(args):
 def export_data(file_path, data):
     with open(file_path, "w") as f:
         json.dump(data, f, ensure_ascii=False)
+
 
 def get_parser():
     # driver_location: None, country: None, postal_code: None, places_types: None, num_pages: None)
@@ -34,7 +35,7 @@ def get_parser():
                         default="/home/cflores/cflores_workspace/gmaps-extractor/resources/chromedriver")
     parser.add_argument('-c', '--country', nargs=1, help='country', default="Spain")
     parser.add_argument('-t', '--places_types', nargs='*', help='types of places separated by colon',
-                        default=["Restaurants"])
+                        default=["Restaurants", "Bars"])
     parser.add_argument('-p', '--results_pages', nargs=1, help='number of pages to scrap', default=10)
     parser.add_argument('-n', '--num_reviews', nargs=1, help='number of reviews to scrap', default=30)
     parser.add_argument('-e', '--executors', nargs=1, help='number of executors', default=10)
