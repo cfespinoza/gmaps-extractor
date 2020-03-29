@@ -81,7 +81,7 @@ if __name__ == "__main__":
                         level=logging.INFO,
                         datefmt="%d-%m-%Y %H:%M:%S",
                         format="[%(asctime)s] [%(levelname)8s] --- %(message)s (%(filename)s:%(lineno)d)")
-    driver_path = "/home/cflores/cflores_workspace/gmaps-extractor/resources/chromedriver"
+    driver_path = "/resources/chromedriver"
     test_urls = [
         ["Cafetería+Harizki",
          "https://www.google.com/maps/search/48005+Restaurants+Cafetería+Harizki/@43.2598164,-2.9304266,15z", 3],

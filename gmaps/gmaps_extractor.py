@@ -29,24 +29,26 @@ def get_parser():
         prog='gmaps-scrapper',
         usage='gmaps-extractor.py -cp <postal_code> -d <driver_path> -c <country> -t <types_separated_by_colon> -p <pages> '
     )
-    parser.add_argument('-cp', '--postal_code', nargs=1,
+    parser.add_argument('-cp', '--postal_code', nargs="?",
                         help='postal code', default="48005")
-    parser.add_argument('-d', '--driver_path', nargs=1, help='selenium driver location',
+    parser.add_argument('-d', '--driver_path', nargs="?", help='selenium driver location',
                         default="/home/cflores/cflores_workspace/gmaps-extractor/resources/chromedriver")
-    parser.add_argument('-c', '--country', nargs=1, help='country', default="Spain")
+    parser.add_argument('-c', '--country', nargs="?", help='country', default="Spain")
     parser.add_argument('-t', '--places_types', nargs='*', help='types of places separated by colon',
                         default=["Restaurants", "Bars"])
-    parser.add_argument('-p', '--results_pages', nargs=1, help='number of pages to scrap', default=10)
-    parser.add_argument('-n', '--num_reviews', nargs=1, help='number of reviews to scrap', default=30)
-    parser.add_argument('-e', '--executors', nargs=1, help='number of executors', default=10)
-    parser.add_argument('-r', '--results_path', nargs=1, help='path where results would be located',
+    parser.add_argument('-p', '--results_pages', nargs="?", help='number of pages to scrap', default=10)
+    parser.add_argument('-n', '--num_reviews', nargs="?", help='number of reviews to scrap', default=30)
+    parser.add_argument('-e', '--executors', nargs="?", help='number of executors', default=10)
+    parser.add_argument('-m', '--output_mode', nargs="?", help='mode to store the output, local or remote',
+                        default="local", choices=["local", "remote"])
+    parser.add_argument('-r', '--results_path', nargs="?", help='path where results would be located',
                         default="/home/cflores/cflores_workspace/gmaps-extractor/results")
     parser.add_argument('-l', '--debug_level', nargs=1, help='debug level', default="info",
                         choices=["debug", "info", "warning", "error", "critical"])
     return parser
 
 
-if __name__ == "__main__":
+def extract():
     parser = get_parser()
     args = parser.parse_args()
     logging.basicConfig(stream=sys.stdout,
@@ -78,3 +80,7 @@ if __name__ == "__main__":
     export_data(results_file_path, data_results)
     end_time = time.time()
     logger.info("total of spend time for extraction process: {total} seconds ".format(total=int(end_time - init_time)))
+
+
+if __name__ == "__main__":
+    extract()

@@ -76,7 +76,7 @@ class ResultsExtractor(AbstractGMapsExtractor):
                     driver.execute_script("arguments[0].click();", next_button)
                     driver.wait.until(ec.url_changes(driver.current_url))
                 else:
-                    self.logger.warning("next page button was not found...something went wrong aborting bucle")
+                    self.logger.warning("next page button was not found...something went wrong. aborting bucle")
                     break
                 end_page_time = time.time()
                 elapsed = int(end_page_time - init_page_time)
