@@ -11,11 +11,10 @@ class AbstractGMapsExtractor:
     def __init__(self, driver_location: None):
         super(AbstractGMapsExtractor, self).__init__()
         self.logger = logging.getLogger(self.__class__.__name__)
-        self._default_driver_args = ["--no-sandbox", "--disable-setuid-sandbox", "--remote-debugging-port=9222",
-                                     "--disable-dev-shm-using", "--disable-extensions", "--disable-gpu",
-                                     "start-maximized", "disable-infobars", "--headless"]
-        self._default_experimental_driver_args = {"prefs": {"profile.managed_default_content_settings.": 2}}
-        self._result_elements_xpath_query = "//div[contains(@class, 'section-result-content')]"
+        self._default_driver_args = ["--disable-extensions", "--disable-gpu", "start-maximized",
+                                     "disable-infobars", "--headless"]
+        self._default_experimental_driver_args = {}
+        self.shared_result_elements_xpath_query = "//div[contains(@class, 'section-result-content')]"
         self._driver_location = driver_location
         self._driver_options = None
         self._driver_wait = 60
@@ -37,15 +36,11 @@ class AbstractGMapsExtractor:
         for argument in arguments:
             chrome_options.add_argument(argument)
 
-        self._driver_options = chrome_options
         return chrome_options
 
-    def _build_driver(self, arguments=None, experimental_arguments=None, provided_driver_location=None):
-        arguments = arguments if arguments else self._default_driver_args
-        experimental_args = experimental_arguments if experimental_arguments else self._default_experimental_driver_args
+    def _build_driver(self, provided_driver_location=None, driver_options=None):
         driver_location = provided_driver_location if provided_driver_location else self._driver_location
-        options = self._get_driver_config(arguments,
-                                          experimental_args) if experimental_args and experimental_args else self._driver_options
+        options = driver_options if driver_options else self._get_driver_config()
 
         # initialize the driver
         driver = webdriver.Chrome(
@@ -53,7 +48,6 @@ class AbstractGMapsExtractor:
             chrome_options=options)
         driver.wait = WebDriverWait(driver, self._driver_wait)
         driver.implicitly_wait(self._driver_implicit_wait)
-        self._driver = driver
         return driver
 
     def force_sleep(self, sleep_time=0):
@@ -67,10 +61,11 @@ class AbstractGMapsExtractor:
         else:
             self.logger.warning("there is no any driver to shut down")
 
-    def get_info_obj(self, xpath_query):
+    def get_info_obj(self, xpath_query, external_driver=None):
         element = None
+        driver = external_driver if external_driver else self._driver
         try:
-            element = self._driver.find_element_by_xpath(xpath_query)
+            element = driver.find_element_by_xpath(xpath_query)
         except NoSuchElementException:
             element = None
         return element
@@ -79,7 +74,10 @@ class AbstractGMapsExtractor:
         return self._driver
 
     def auto_boot(self):
-        self._build_driver(provided_driver_location=self._driver_location)
+        self._driver_options = self._get_driver_config()
+        self._driver = self._build_driver(provided_driver_location=self._driver_location,
+                                          driver_options=self._driver_options)
+
 
     def scrap(self):
         raise NotImplementedError("Method must be implemented in subclass")
