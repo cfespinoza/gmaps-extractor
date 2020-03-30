@@ -31,7 +31,7 @@ def setup_package():
         classifiers=['Programming Language :: Python :: 3'],
         entry_points={
             'console_scripts': [
-                'gmaps_extractor = gmaps.gmaps_extractor:extract',
+                'gmaps-extractor = gmaps.gmaps_extractor:extract',
             ]
         }
     )

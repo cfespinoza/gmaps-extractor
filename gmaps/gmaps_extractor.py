@@ -42,9 +42,9 @@ def get_parser():
     parser.add_argument('-c', '--country', nargs="?", help='country', default="Spain")
     parser.add_argument('-t', '--places_types', nargs='*', help='types of places separated by colon',
                         default=["Restaurants", "Bars"])
-    parser.add_argument('-p', '--results_pages', nargs="?", help='number of pages to scrap', default=1)
-    parser.add_argument('-n', '--num_reviews', nargs="?", help='number of reviews to scrap', default=3)
-    parser.add_argument('-e', '--executors', nargs="?", help='number of executors', default=10)
+    parser.add_argument('-p', '--results_pages', nargs="?", help='number of pages to scrap', default=1, type=int)
+    parser.add_argument('-n', '--num_reviews', nargs="?", help='number of reviews to scrap', default=3, type=int)
+    parser.add_argument('-e', '--executors', nargs="?", help='number of executors', default=10, type=int)
     parser.add_argument('-m', '--output_mode', nargs="?", help='mode to store the output, local or remote',
                         default="remote", choices=["local", "remote"])
     parser.add_argument('-r', '--results_path', nargs="?", help='path where results would be located',
@@ -64,6 +64,9 @@ def extract():
                         datefmt="%d-%m-%Y %H:%M:%S",
                         format="[%(asctime)s] [%(levelname)8s] --- %(message)s (%(filename)s:%(lineno)d)")
     logger = logging.getLogger("gmaps_extractor")
+
+    logger.info("arguments that will be used in the extraction are the following:")
+    logger.info(args)
     db_config = None
 
     extraction_date = datetime.now().date().isoformat()
