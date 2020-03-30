@@ -31,6 +31,7 @@ class MySqlWriter(DbWriter):
                     )
                     VALUES (%s, %s, %s, %s, %s)
                 """
+        self._find_place_query = """SELECT id FROM commercial_premise WHERE name = %s"""
         self.auto_boot()
 
     def auto_boot(self):
@@ -87,14 +88,28 @@ class MySqlWriter(DbWriter):
         total_score = int(element.get("total_scores").replace(",", "").replace(".", "")) if element.get("total_scores") else None
         inserted = False
         try:
-            values = (
-                name, zip_code, coordinates, telephone, opening_hours, premise_type, score, total_score, price_range,
-                style, address, date
-            )
-            self.logger.info("storing commercial premise in database")
-            cursor.execute(self._commercial_premise_query, values)
-            self.db.commit()
-            element_id = cursor.lastrowid
+            cursor.execute(self._find_place_query, (name,))
+            db_element = cursor.fetchone()
+            element_id = None
+            if db_element:
+                self.logger.info("commercial premise found in database")
+                element_id = db_element[0]
+            else:
+                values = (
+                    name, zip_code, coordinates, telephone, opening_hours, premise_type, score, total_score,
+                    price_range, style, address, date
+                )
+                try:
+                    self.logger.info("storing commercial premise in database")
+                    cursor.execute(self._commercial_premise_query, values)
+                    self.db.commit()
+                    element_id = cursor.lastrowid
+                except Exception as e:
+                    self.logger.error("error storing commercial premise with -{name}-".format(name=name))
+                    self.logger.error(str(e))
+                    self.logger.error("wrong value: {values}".format(values=values))
+                    raise Exception("avoid registration: commercial premise with name -{name}- with wrong values"
+                                    .format(name=name))
             # Store comments
             values = [(element_id, comment, date) for comment in element.get("comments", [])]
             self.logger.info("storing commercial premise comments in database")
@@ -104,16 +119,23 @@ class MySqlWriter(DbWriter):
                 except Exception as e:
                     self.logger.error("error storing comments for -{name}-".format(name=name))
                     self.logger.error(str(e))
+                    self.logger.error("wrong value: {values}".format(values=v))
+            self.db.commit()
             # Store occupancy data
             if element.get("occupancy"):
                 values = []
                 for week_day, content in self.decompose_occupancy_data(element["occupancy"]).items():
-                    if content is not None and content != {}:
+                    if content and content.items():
+                        self.logger.info("storing commercial premise occupancy in database")
                         for key, value in content.items():
-                            values.append((element_id, week_day, key, value, date))
-                self.logger.info("storing commercial premise occupancy in database")
-                cursor.executemany(self._commercial_premise_occupation_query, values)
-            self.db.commit()
+                            try:
+                                values = (element_id, week_day, key, value, date,)
+                                cursor.execute(self._commercial_premise_occupation_query, values)
+                            except Exception as e:
+                                self.logger.error("error storing occupancy for -{name}-".format(name=name))
+                                self.logger.error(str(e))
+                                self.logger.error("wrong value: {values}".format(values=values))
+                self.db.commit()
             inserted = True
         except Exception as e:
             self.logger.error("error during writing data for {data}".format(data=element))
