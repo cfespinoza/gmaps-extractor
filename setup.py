@@ -20,7 +20,7 @@ if os.path.isfile("requirements.txt"):
 
 def setup_package():
     metadata = dict(
-        name='gmapsextractor',
+        name='gmaps-extractor',
         packages=find_packages(),
         description="""GMaps Places Scraper Library.""",
         install_requires=dependencies,
@@ -31,7 +31,7 @@ def setup_package():
         classifiers=['Programming Language :: Python :: 3'],
         entry_points={
             'console_scripts': [
-                'gmaps_extractor = gmaps.gmaps_extractor:main',
+                'gmaps_extractor = gmaps.gmaps_extractor:extract',
             ]
         }
     )

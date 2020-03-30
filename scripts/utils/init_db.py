@@ -1,7 +1,7 @@
 import argparse
 
 import mysql.connector
-from gmaps.db.const import *
+from scripts.utils.const import *
 
 
 def get_cursor(host=None, user=None, passwd=None, schema=None, auth_plugin=None):

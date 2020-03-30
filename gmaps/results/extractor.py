@@ -1,7 +1,7 @@
 import logging
 import time
 
-from gmaps.abstract.extractor import AbstractGMapsExtractor
+from gmaps.extractor.extractor import AbstractGMapsExtractor
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.common.by import By
 

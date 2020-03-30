@@ -3,7 +3,7 @@ import logging
 
 import mysql.connector
 
-from gmaps.db.writer import DbWriter
+from gmaps.writer.writer import DbWriter
 
 
 class MySqlWriter(DbWriter):
