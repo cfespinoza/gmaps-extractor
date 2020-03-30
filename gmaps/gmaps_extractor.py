@@ -43,10 +43,10 @@ def get_parser():
     parser.add_argument('-t', '--places_types', nargs='*', help='types of places separated by colon',
                         default=["Restaurants", "Bars"])
     parser.add_argument('-p', '--results_pages', nargs="?", help='number of pages to scrap', default=1)
-    parser.add_argument('-n', '--num_reviews', nargs="?", help='number of reviews to scrap', default=30)
+    parser.add_argument('-n', '--num_reviews', nargs="?", help='number of reviews to scrap', default=3)
     parser.add_argument('-e', '--executors', nargs="?", help='number of executors', default=10)
     parser.add_argument('-m', '--output_mode', nargs="?", help='mode to store the output, local or remote',
-                        default="local", choices=["local", "remote"])
+                        default="remote", choices=["local", "remote"])
     parser.add_argument('-r', '--results_path', nargs="?", help='path where results would be located',
                         default="/home/cflores/cflores_workspace/gmaps-extractor/results", )
     parser.add_argument('-dc', '--db_config_path', nargs="?", help='remote db config file path',
@@ -66,7 +66,7 @@ def extract():
     logger = logging.getLogger("gmaps_extractor")
     db_config = None
 
-    extraction_date = datetime.now().date()
+    extraction_date = datetime.now().date().isoformat()
     if args.output_mode == "remote":
         if args.db_config_path:
             logger.info("output_mode set to {mode} and {config} file will be used to configure the remote connection"
@@ -78,8 +78,8 @@ def extract():
                         .format(mode=args.output_mode))
             parser.print_help()
             exit(-1)
-    else:
-        extraction_date = extraction_date.strftime('%d-%m-%Y %H:%M:%S')
+    # else:
+    #    extraction_date = extraction_date.strftime('%d-%m-%Y %H:%M:%S')
     data_file_name = "{country}_{cp}_{types}_{ts}.json".format(country=args.country.lower(),
                                                                cp=args.postal_code,
                                                                types="_".join([place_type.lower() for place_type in

@@ -1,6 +1,7 @@
+import json
 import logging
 
-import mysql
+import mysql.connector
 
 from gmaps.db.writer import DbWriter
 
@@ -15,7 +16,7 @@ class MySqlWriter(DbWriter):
         self.db = None
         self._commercial_premise_query = """
                     INSERT INTO commercial_premise 
-                        (name, zip_code, coordinates, telephone_number, opennig_hours, type, score, total_scores, price_range, style, address, date) 
+                        (name, zip_code, coordinates, telephone_number, opening_hours, type, score, total_scores, price_range, style, address, date) 
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """
         self._commercial_premise_comments_query = """
@@ -40,7 +41,7 @@ class MySqlWriter(DbWriter):
             database=self.db_name
         )
 
-    def finis(self):
+    def finish(self):
         self.db.close()
 
     def decompose_occupancy_data(self, occupancy_levels):
@@ -66,9 +67,12 @@ class MySqlWriter(DbWriter):
                             pass
         return occupancy
 
-    def write(self, element: dict):
+    def write(self, elementToDecode):
+        element = json.loads(json.dumps(elementToDecode, ensure_ascii=False))
         cursor = self.db.cursor()
         # Store element
+        op_values = element.get("opening_hours")[0] if len(element.get("opening_hours", [])) == 1 else element.get(
+            "opening_hours", [])
         name = element.get("name", None)
         zip_code = element.get("zip_code", None)  # external added to element in extraction process
         date = element.get("date", None)  # external added to element in extraction process
@@ -78,9 +82,9 @@ class MySqlWriter(DbWriter):
         premise_type = element.get("premise_type", None)  # to extract
         coordinates = element.get("coordinates", None)
         telephone = element.get("telephone_number", None)
-        opening_hours = ",".join(element.get("opennig_hours")) if element.get("opennig_hours") else None
-        score = element.get("score", None)
-        total_score = element.get("total_scores", None)
+        opening_hours = ",".join(op_values) if op_values else None
+        score = float(element.get("score").replace(",", ".")) if element.get("score") else None
+        total_score = int(element.get("total_scores").replace(",", "").replace(".", "")) if element.get("total_scores") else None
         inserted = False
         try:
             values = (
@@ -93,9 +97,13 @@ class MySqlWriter(DbWriter):
             element_id = cursor.lastrowid
             # Store comments
             values = [(element_id, comment, date) for comment in element.get("comments", [])]
-            if len(values) > 0:
-                self.logger.info("storing commercial premise comments in database")
-                cursor.executemany(self._commercial_premise_comments_query, values)
+            self.logger.info("storing commercial premise comments in database")
+            for v in values:
+                try:
+                    cursor.execute(self._commercial_premise_comments_query, v)
+                except Exception as e:
+                    self.logger.error("error storing comments for -{name}-".format(name=name))
+                    self.logger.error(str(e))
             # Store occupancy data
             if element.get("occupancy"):
                 values = []

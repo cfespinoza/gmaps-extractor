@@ -67,7 +67,6 @@ class AbstractGMapsExtractor:
         else:
             self.logger.debug("there is no any writer to shut down")
 
-
     def get_info_obj(self, xpath_query, external_driver=None):
         element = None
         driver = external_driver if external_driver else self._driver

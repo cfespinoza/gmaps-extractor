@@ -95,13 +95,13 @@ if __name__ == "__main__":
             zip_code INT(5) NOT NULL,
             coordinates VARCHAR(25),
             telephone_number VARCHAR(25),
-            opennig_hours VARCHAR(100),
-            type VARCHAR(20) NOT NULL,
-            score FLOAT(2) DEFAULT 0.0,
+            opening_hours VARCHAR(600),
+            type VARCHAR(300),
+            score FLOAT DEFAULT 0.0,
             total_scores INT(10) DEFAULT 0,
             price_range VARCHAR(5),
-            style VARCHAR(20),
-            address VARCHAR(40) NOT NULL,
+            style VARCHAR(300),
+            address VARCHAR(300),
             date DATE NOT NULL,
             PRIMARY KEY(ID)
         )
@@ -111,9 +111,10 @@ if __name__ == "__main__":
         CREATE TABLE IF NOT EXISTS commercial_premise_comments (
             id INT NOT NULL AUTO_INCREMENT,
             commercial_premise_id INT NOT NULL,
-            content VARCHAR(200),
+            content VARCHAR(600),
             PRIMARY KEY(id),
             INDEX prem_ind (commercial_premise_id),
+            date DATE NOT NULL,
             FOREIGN KEY (commercial_premise_id)
                 REFERENCES commercial_premise(id)
                 ON DELETE CASCADE
@@ -125,9 +126,10 @@ if __name__ == "__main__":
         CREATE TABLE IF NOT EXISTS commercial_premise_occupation (
             id INT NOT NULL AUTO_INCREMENT,
             commercial_premise_id INT NOT NULL,
-            week_day VARCHAR(9) NOT NULL,
-            time_period CHAR(2) NOT NULL,
+            week_day VARCHAR (50),
+            time_period VARCHAR (50),
             occupation FLOAT DEFAULT 0.0,
+            date DATE NOT NULL,
             PRIMARY KEY(id),
             INDEX prem_ind (commercial_premise_id),
             FOREIGN KEY (commercial_premise_id)

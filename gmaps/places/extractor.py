@@ -98,10 +98,12 @@ class PlacesExtractor(AbstractGMapsExtractor):
 
     def _get_place_info(self, provided_driver=None):
         driver = provided_driver if provided_driver else self.get_driver()
-        name_obj = self.get_obj_text(xpath_query=self._place_name_xpath, external_driver=driver)
         # extract basic info
+        name_obj = self.get_obj_text(xpath_query=self._place_name_xpath, external_driver=driver)
+        name_val = name_obj if name_obj else self._place_name
         score_obj = self.get_obj_text(xpath_query=self._place_score_xpath, external_driver=driver)
         total_score_obj = self.get_obj_text(xpath_query=self._total_votes_xpath, external_driver=driver)
+        total_score_val = total_score_obj.replace("(", "").replace(")", "") if total_score_obj else total_score_obj
         address_obj = self.get_obj_text(xpath_query=self._address_xpath, external_driver=driver)
         coords_obj = self.get_obj_text(xpath_query=self._coords_xpath_selector, external_driver=driver)
         telephone_obj = self.get_obj_text(xpath_query=self._telephone_xpath_selector, external_driver=driver)
@@ -110,17 +112,18 @@ class PlacesExtractor(AbstractGMapsExtractor):
         style = self.get_obj_text(xpath_query=self._style, external_driver=driver)
         premise_type = self.get_obj_text(xpath_query=self._premise_type, external_driver=driver)
         opening_value = opening_obj.get_attribute("aria-label").split(",") if opening_obj else opening_obj,
+        self.logger.info("######## opening_value: {}".format(opening_value))
         occupancy_obj = self._get_occupancy(external_driver=driver)
         comments_list = self._get_comments(self._place_name, self.sleep_m, external_driver=driver)
         place_info = {
-            "name": name_obj,
+            "name": name_val,
             "score": score_obj,
-            "total_scores": total_score_obj,
+            "total_scores": total_score_val,
             "address": address_obj,
             "occupancy": occupancy_obj,
             "coordinates": coords_obj,
             "telephone_number": telephone_obj,
-            "opennig_hours": opening_value,
+            "opening_hours": opening_value,
             "comments": comments_list,
             "zip_code": self._postal_code,
             "date": self._extraction_date,
