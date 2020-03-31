@@ -68,8 +68,7 @@ class MySqlWriter(DbWriter):
                             pass
         return occupancy
 
-    def write(self, elementToDecode):
-        element = json.loads(json.dumps(elementToDecode, ensure_ascii=False))
+    def write(self, element):
         cursor = self.db.cursor()
         # Store element
         op_values = element.get("opening_hours")[0] if len(element.get("opening_hours", [])) == 1 else element.get(
@@ -111,35 +110,31 @@ class MySqlWriter(DbWriter):
                     raise Exception("avoid registration: commercial premise with name -{name}- with wrong values"
                                     .format(name=name))
             # Store comments
-            values = [(element_id, comment, date) for comment in element.get("comments", [])]
+            values = [(element_id, comment.encode('ascii', 'ignore'), date) for comment in element.get("comments", [])]
             self.logger.info("storing commercial premise comments in database")
-            for v in values:
-                try:
-                    cursor.execute(self._commercial_premise_comments_query, v)
-                except Exception as e:
-                    self.logger.error("error storing comments for -{name}-".format(name=name))
-                    self.logger.error(str(e))
-                    self.logger.error("wrong value: {values}".format(values=v))
+            cursor.executemany(self._commercial_premise_comments_query, values)
             self.db.commit()
             # Store occupancy data
             if element.get("occupancy"):
                 values = []
+                self.logger.info("storing commercial premise occupancy in database")
                 for week_day, content in self.decompose_occupancy_data(element["occupancy"]).items():
                     if content and content.items():
-                        self.logger.info("storing commercial premise occupancy in database")
-                        for key, value in content.items():
-                            try:
-                                values = (element_id, week_day, key, value, date,)
-                                cursor.execute(self._commercial_premise_occupation_query, values)
-                            except Exception as e:
-                                self.logger.error("error storing occupancy for -{name}-".format(name=name))
-                                self.logger.error(str(e))
-                                self.logger.error("wrong value: {values}".format(values=values))
-                self.db.commit()
+                        values += [(element_id, week_day, key, value, date) for key, value in content.items()]
+                try:
+                    cursor.executemany(self._commercial_premise_occupation_query, values)
+                    self.db.commit()
+                except Exception as e:
+                    self.logger.error("error during storing occupancy for place: -{name}-".format(name=name))
+                    self.logger.error(str(e))
+                    self.logger.error("wrong values:")
+                    self.logger.error(values)
             inserted = True
         except Exception as e:
-            self.logger.error("error during writing data for {data}".format(data=element))
+            self.logger.error("error during writing data for place: -{name}-".format(name=name))
             self.logger.error(str(e))
+            self.logger.error("wrong values:")
+            self.logger.error(element)
         finally:
             cursor.close()
             return inserted
