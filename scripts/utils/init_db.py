@@ -1,7 +1,6 @@
 import argparse
 
 import mysql.connector
-from scripts.utils.const import *
 
 
 def get_cursor(host=None, user=None, passwd=None, schema=None, auth_plugin=None):
@@ -41,38 +40,6 @@ def delete_tables(db_cursor, tables):
 def create_tables(db_cursor, queries):
     for q in queries:
         db_cursor.execute(q)
-
-
-def _reset_db(server, user, country, dbname, auth_plugin):
-    cursor = get_cursor(server, user, country, dbname, auth_plugin)
-    # Main table
-    delete_tables(db_cursor=cursor, tables=TABLES)
-    create_tables(db_cursor=cursor, queries=CREATION_TABLES_QUERIES)
-    cursor.execute("SHOW TABLES")
-    rows = cursor.fetchall()
-    assert len(rows) == len(CREATION_TABLES_QUERIES)
-    cursor.close()
-
-
-def _init_db(server, user, country, dbname, auth_plugin):
-    cursor = get_cursor(server, user, country, dbname, auth_plugin)
-    # Main table
-    create_tables(db_cursor=cursor, queries=CREATION_TABLES_QUERIES)
-    cursor.execute("SHOW TABLES")
-    rows = cursor.fetchall()
-    assert len(rows) == len(CREATION_TABLES_QUERIES)
-    cursor.close()
-
-
-def main():
-    parser = get_parser()
-    args = parser.parse_args()
-    if args.option == "init":
-        _init_db(args.server, args.user, args.passwd, args.dbname)
-    elif args.option == "reset":
-        _reset_db(args.server, args.user, args.passwd, args.dbname)
-    else:
-        print("operation -{operation}- not supported".format(operation=args.option))
 
 
 if __name__ == "__main__":
