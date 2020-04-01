@@ -12,7 +12,7 @@ class AbstractGMapsExtractor:
         super(AbstractGMapsExtractor, self).__init__()
         self.logger = logging.getLogger(self.__class__.__name__)
         self._default_driver_args = ["--disable-extensions", "--disable-gpu", "start-maximized",
-                                     "disable-infobars", "--headless"]
+                                     "disable-infobars", "--headless", "--no-sandbox", "--disable-dev-shm-usage"]
         self._default_experimental_driver_args = {}
         self.shared_result_elements_xpath_query = "//div[contains(@class, 'section-result-content')]"
         self._driver_location = driver_location
