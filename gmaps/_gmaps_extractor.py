@@ -63,7 +63,7 @@ def get_parser():
     parser.add_argument('-t', '--places_types', nargs='*', help='types of places separated by colon',
                         default=["Restaurants", "Bars"])
     parser.add_argument('-f', '--file_zip_code', help='path to file with zip code to scrap',
-                        default="/home/cflores/cflores_workspace/gmaps-extractor/resources/zip_codes_spain.json")
+                        default="/home/cflores/cflores_workspace/gmaps-extractor/resources/zip_codes_spain_ori.json")
     parser.add_argument('-p', '--results_pages', nargs="?", help='number of pages to scrap', default=1, type=int)
     parser.add_argument('-n', '--num_reviews', nargs="?", help='number of reviews to scrap', default=3, type=int)
     parser.add_argument('-e', '--executors', nargs="?", help='number of executors', default=10, type=int)
