@@ -32,6 +32,7 @@ def setup_package():
         entry_points={
             'console_scripts': [
                 'gmaps-extractor = gmaps.gmaps_extractor:extract',
+                'gmaps-db = gmaps.db.db_ops:db_ops'
             ]
         }
     )

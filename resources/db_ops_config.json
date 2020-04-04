@@ -1,0 +1,7 @@
+{
+  "host": "localhost",
+  "db_name": "gmaps",
+  "user": "root",
+  "passwd": "1234",
+  "operation": "init"
+}

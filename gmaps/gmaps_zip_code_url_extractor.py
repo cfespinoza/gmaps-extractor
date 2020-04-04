@@ -52,7 +52,7 @@ def export_data(file_path, data):
 def get_parser():
     # driver_location: None, country: None, postal_code: None, places_types: None, num_pages: None)
     parser = argparse.ArgumentParser(
-        prog='gmaps-scrapper',
+        prog='gmaps-url-scrapper',
         usage='gmaps-extractor.py -cp <postal_code> -d <driver_path> -c <country> -t <types_separated_by_colon> -p <pages>'
     )
     parser.add_argument('-cp', '--postal_code', nargs="?",
@@ -60,12 +60,8 @@ def get_parser():
     parser.add_argument('-d', '--driver_path', nargs="?", help='selenium driver location',
                         default="/home/cflores/cflores_workspace/gmaps-extractor/resources/chromedriver")
     parser.add_argument('-c', '--country', nargs="?", help='country', default="Spain")
-    parser.add_argument('-t', '--places_types', nargs='*', help='types of places separated by colon',
-                        default=["Restaurants", "Bars"])
     parser.add_argument('-f', '--file_zip_code', help='path to file with zip code to scrap',
                         default="/home/cflores/cflores_workspace/gmaps-extractor/resources/zip_codes_spain.json")
-    parser.add_argument('-p', '--results_pages', nargs="?", help='number of pages to scrap', default=1, type=int)
-    parser.add_argument('-n', '--num_reviews', nargs="?", help='number of reviews to scrap', default=3, type=int)
     parser.add_argument('-e', '--executors', nargs="?", help='number of executors', default=10, type=int)
     parser.add_argument('-m', '--output_mode', nargs="?", help='mode to store the output, local or remote',
                         default="remote", choices=["local", "remote"])
