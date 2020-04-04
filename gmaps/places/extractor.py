@@ -111,8 +111,7 @@ class PlacesExtractor(AbstractGMapsExtractor):
         price_range = self.get_obj_text(xpath_query=self._price_range, external_driver=driver)
         style = self.get_obj_text(xpath_query=self._style, external_driver=driver)
         premise_type = self.get_obj_text(xpath_query=self._premise_type, external_driver=driver)
-        opening_value = opening_obj.get_attribute("aria-label").split(",") if opening_obj else opening_obj,
-        self.logger.info("######## opening_value: {}".format(opening_value))
+        opening_value = opening_obj.get_attribute("aria-label").split(",") if opening_obj else []
         occupancy_obj = self._get_occupancy(external_driver=driver)
         comments_list = self._get_comments(self._place_name, self.sleep_m, external_driver=driver)
         place_info = {
@@ -132,8 +131,7 @@ class PlacesExtractor(AbstractGMapsExtractor):
             "premise_type": premise_type,
             "extractor_url": self._url
         }
-        self.logger.info("info retrieved for place -{name}-: {info}".format(name=self._place_name,
-                                                                            info=place_info))
+        self.logger.info("info retrieved for place -{name}-".format(name=self._place_name))
         return place_info
 
     def _get_comments(self, place_name: None, sleep_time: None, external_driver=None):
@@ -235,7 +233,8 @@ class PlacesExtractor(AbstractGMapsExtractor):
             place_info = self._scrap(provided_driver=driver)
             result_to_return = self.export_data(place_info)
         except Exception as e:
-            self.logger.error("error during reviews extraction: {}".format(str(e)))
+            self.logger.error("error during reviews extraction for -{name}-: {error}".format(name=self._place_name,
+                                                                                             error=str(e)))
         finally:
             self.finish()
 

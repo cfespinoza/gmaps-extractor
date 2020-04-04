@@ -111,7 +111,7 @@ if __name__ == "__main__":
         CREATE TABLE IF NOT EXISTS commercial_premise_comments (
             id INT NOT NULL AUTO_INCREMENT,
             commercial_premise_id INT NOT NULL,
-            content VARCHAR(600),
+            content TEXT,
             PRIMARY KEY(id),
             INDEX prem_ind (commercial_premise_id),
             date DATE NOT NULL,
