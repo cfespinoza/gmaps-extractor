@@ -2,7 +2,7 @@ import logging
 import time
 
 from gmaps.commons.commons import validate_required_keys
-from gmaps.extractor.extractor import AbstractGMapsExtractor
+from gmaps.commons.extractor.extractor import AbstractGMapsExtractor
 from selenium.webdriver.support import expected_conditions as ec
 from gmaps.url.writer import UrlFileWriter, UrlDbWriter
 
@@ -71,7 +71,7 @@ class UrlsExtractor(AbstractGMapsExtractor):
         self.logger.info(
             "-{postal_code}-: formatted url to look up results: {url}".format(postal_code=self._postal_code,
                                                                               url=url))
-        return {"zip_code": self._postal_code, "gmaps_url": url, "gmaps_coordinates": coords}
+        return {"zip_code": self._postal_code, "gmaps_url": url, "gmaps_coordinates": coords, "country": self._country}
 
     def scrap(self):
         driver = self.get_driver()

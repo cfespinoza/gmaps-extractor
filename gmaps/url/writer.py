@@ -4,7 +4,7 @@ import os
 
 import mysql.connector
 
-from gmaps.writer.writer import FileWriter, DbWriter
+from gmaps.commons.writer.writer import FileWriter, DbWriter
 
 
 class UrlFileWriter(FileWriter):
@@ -46,9 +46,9 @@ class UrlDbWriter(DbWriter):
         self._insert_zip_code_info = """
             INSERT INTO zip_code_info
             (
-                zip_code, gmaps_url, gmaps_coordinates
+                zip_code, gmaps_url, gmaps_coordinates, country
             )
-            VALUES (%s, %s, %s)
+            VALUES (%s, %s, %s, %s)
         """
 
     def finish(self):
@@ -67,9 +67,10 @@ class UrlDbWriter(DbWriter):
         zip_code = element.get("zip_code")
         gmaps_url = element.get("gmaps_url")
         gmaps_coordinates = element.get("gmaps_coordinates")
+        country = element.get("country")
         inserted = False
         try:
-            values = (zip_code, gmaps_url, gmaps_coordinates)
+            values = (zip_code, gmaps_url, gmaps_coordinates, country)
             cursor.execute(self._insert_zip_code_info, values)
             self.db.commit()
             inserted = True

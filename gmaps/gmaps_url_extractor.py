@@ -4,7 +4,8 @@ import time
 from datetime import datetime
 from multiprocessing.pool import Pool
 
-from gmaps.commons.commons import get_obj_from_file, init_default_handler, validate_required_keys
+from gmaps.commons.commons import get_obj_from_file, init_default_handler, validate_required_keys, \
+    get_zip_codes_obj_config
 from gmaps.url.extractor import UrlsExtractor
 
 
@@ -66,22 +67,8 @@ def get_parser():
             }
           }
         }
-    ''', default="/home/cflores/cflores_workspace/gmaps-extractor/resources/execution_config.json")
+    ''', default="/home/cflores/cflores_workspace/gmaps-extractor/resources/url_execution_config.json")
     return parser
-
-
-def get_zip_codes_from_config(input_config):
-    if input_config.get("type") == "local":
-        return input_config.get("local")
-    elif input_config.get("type") == "file":
-        config = input_config.get("file")
-        config.update({"zip_codes": get_obj_from_file(config.get("file_path"))})
-        return config
-    elif input_config.get("type") == "db":
-        # todo implement the retrieve postal code from db
-        return None
-    else:
-        return None
 
 
 def extract():
@@ -100,7 +87,7 @@ def extract():
     if validate_required_keys(keys=required_keys, obj=execution_config):
         input_config = execution_config.get("input_config")
         output_config = execution_config.get("output_config")
-        zip_config = get_zip_codes_from_config(input_config)
+        zip_config = get_zip_codes_obj_config(input_config)
         logger.info("zip codes to extract url: {zip_config}".format(zip_config=zip_config))
         country = zip_config.get("country").capitalize()
         zip_codes = zip_config.get("zip_codes", [])
