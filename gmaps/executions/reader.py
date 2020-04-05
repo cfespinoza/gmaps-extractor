@@ -14,9 +14,9 @@ class ExecutionDbReader(DbReader):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.db = None
         self._read_execution_info = """
-            SELECT a.zip_code as zip_code, a.gmaps_url as gmaps_url, b.place_type as place_type
+            SELECT a.zip_code as zip_code, a.gmaps_url as gmaps_url, b.place_type as place_type,
             FROM zip_code_info as a
-            JOIN execution_info as b on a.zip_code = b.zip_code
+            JOIN execution_info as b on a.zip_code = b.zip_code and a.country = b.country
         """
 
     def finish(self):

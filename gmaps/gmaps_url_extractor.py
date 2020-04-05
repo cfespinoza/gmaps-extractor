@@ -67,7 +67,7 @@ def get_parser():
             }
           }
         }
-    ''', default="/home/cflores/cflores_workspace/gmaps-extractor/resources/execution_config.json")
+    ''', default="/home/cflores/cflores_workspace/gmaps-extractor/resources/url_execution_config.json")
     return parser
 
 

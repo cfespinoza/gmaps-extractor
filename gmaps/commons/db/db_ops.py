@@ -81,6 +81,7 @@ def create_schema(host=None, user=None, passwd=None, db_name=None):
             zip_code VARCHAR(5) NOT NULL,
             gmaps_url VARCHAR(600) NOT NULL,
             gmaps_coordinates VARCHAR(100) NOT NULL,
+            country VARCHAR(100) NOT NULL,
             PRIMARY KEY(id)
         )
     """
@@ -90,6 +91,7 @@ def create_schema(host=None, user=None, passwd=None, db_name=None):
             id INT NOT NULL AUTO_INCREMENT,
             zip_code VARCHAR(5) NOT NULL,
             place_type VARCHAR(600) NOT NULL,
+            country VARCHAR(100) NOT NULL,
             PRIMARY KEY(id)
         )
     """
