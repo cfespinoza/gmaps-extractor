@@ -4,10 +4,11 @@ import time
 
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException
 
+from gmaps.commons.commons import validate_required_keys
 from gmaps.commons.extractor.extractor import AbstractGMapsExtractor
 from selenium.webdriver.support import expected_conditions as ec
 
-from gmaps.places.writer import MySqlWriter
+from gmaps.places.writer import PlaceDbWriter, PlaceFileWriter
 
 
 class PlacesExtractor(AbstractGMapsExtractor):
@@ -60,19 +61,52 @@ class PlacesExtractor(AbstractGMapsExtractor):
         self.auto_boot()
 
     def boot_writer(self):
+        if self._output_config.get("type") == "file":
+            config = self._output_config.get("file")
+            required_keys = ["results_path"]
+            if validate_required_keys(required_keys, config):
+                self._writer = PlaceFileWriter(config=config)
+                self._writer.auto_boot()
+            else:
+                self.logger.error("wrong writer config. required configuration is not present")
+                self.logger.error("make sure the output_config has the required configuration set: {required}"
+                                  .format(required=required_keys))
+        elif self._output_config.get("type") == "db":
+            config = self._output_config.get("db").get("config")
+            required_keys = ["host", "database", "db_user", "db_pass"]
+            if validate_required_keys(required_keys, config):
+                self._writer = PlaceDbWriter(config=config)
+                self._writer.auto_boot()
+            else:
+                self.logger.error("wrong writer config. required configuration is not present")
+                self.logger.error("make sure the output_config has the required configuration set: {required}"
+                                  .format(required=required_keys))
+        elif self._output_config:
+            required_keys = ["host", "database", "db_user", "db_pass"]
+            if validate_required_keys(required_keys, self._output_config):
+                self._writer = PlaceDbWriter(config=self._output_config)
+                self._writer.auto_boot()
+            else:
+                self.logger.error("wrong writer config. required configuration is not present")
+                self.logger.error("make sure the output_config has the required configuration set: {required}"
+                                  .format(required=required_keys))
+        else:
+            self.logger.error("writer type is not supported")
+
+    def _boot_writer(self):
         if self._output_config:
-            self._writer = MySqlWriter(self._output_config)
+            self._writer = PlaceDbWriter(self._output_config)
 
     def set_driver(self, driver):
         self._driver = driver
         setattr(self._thread_local, self._thread_driver_id, self._driver)
 
     def auto_boot(self):
-        self.logger.info("overwrite 'auto_boot' function")
+        self.logger.debug("overwrite 'auto_boot' function")
         super().auto_boot()
-        self.logger.info("booting writer")
+        self.logger.debug("booting writer")
         self.boot_writer()
-        self.logger.info("writer booted")
+        self.logger.debug("writer booted")
 
     def _get_day_from_index(self, idx):
         return self._INDEX_TO_DAY.get(idx, "unknown")
@@ -166,8 +200,14 @@ class PlacesExtractor(AbstractGMapsExtractor):
 
     def _scrap(self, provided_driver=None):
         driver = provided_driver if provided_driver else self.get_driver()
-        place_info = {}
+        place_info = {
+            "name": self._place_name,
+            "zip_code": self._postal_code,
+            "date": self._extraction_date,
+            "extractor_url": self._url
+        }
         try:
+            self.force_sleep(self.sleep_xs)
             page_elements = driver.find_elements_by_xpath(self.shared_result_elements_xpath_query)
             places_objs = {place.text.split("\n")[0]: place for place in page_elements}
             if self._place_name in places_objs.keys():

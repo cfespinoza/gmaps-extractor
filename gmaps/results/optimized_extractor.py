@@ -9,10 +9,10 @@ from selenium.webdriver.common.by import By
 class OptimizedResultsExtractor(AbstractGMapsExtractor):
 
     def __init__(self, driver_location: None, postal_code: None,
-                 places_types: None, num_pages: None, base_url=None):
+                 places_types: None, num_pages: None, base_url:None):
         super().__init__(driver_location, output_config=None)
         self.logger = logging.getLogger(self.__class__.__name__)
-        self._places_types = "+".join(places_types.split(","))
+        self._places_types = "+".join(places_types)
         self._postal_code = postal_code
         self._num_pages = num_pages
         self._coords = base_url.split("/")[-1]
@@ -31,7 +31,6 @@ class OptimizedResultsExtractor(AbstractGMapsExtractor):
         total_time = 0
         try:
             driver.get(self._results_url)
-            driver.wait.until(ec.url_changes(self._results_url))
             for n_page in range(self._num_pages):
                 init_page_time = time.time()
                 self.logger.info("-{postal_code}-: page number: -{n_page}-".format(

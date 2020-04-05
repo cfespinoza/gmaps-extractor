@@ -33,7 +33,8 @@ def setup_package():
             'console_scripts': [
                 'gmaps-extractor = gmaps.gmaps_extractor:extract',
                 'gmaps-db = gmaps.commons.db.db_ops:db_ops',
-                'gmaps-url-scrapper = gmaps.gmaps_url_extractor:extract'
+                'gmaps-url-scrapper = gmaps.gmaps_url_extractor:extract',
+                'gmaps-zip-scrapper = gmaps.gmaps_zip_extractor:extract'
             ]
         }
     )

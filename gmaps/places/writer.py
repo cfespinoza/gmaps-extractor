@@ -1,11 +1,13 @@
+import json
 import logging
+import os
 
 import mysql.connector
 
-from gmaps.commons.writer.writer import DbWriter
+from gmaps.commons.writer.writer import DbWriter, FileWriter
 
 
-class MySqlWriter(DbWriter):
+class PlaceDbWriter(DbWriter):
 
     def __init__(self, config: dict):
         super().__init__(db_user=config.get("db_user"), db_pass=config.get("db_pass"))
@@ -137,3 +139,40 @@ class MySqlWriter(DbWriter):
         finally:
             cursor.close()
             return inserted
+
+
+class PlaceFileWriter(FileWriter):
+
+    def __init__(self, config=None):
+        super().__init__(root_path=config.get("results_path"))
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self._file_format = config.get("file_format") if config.get("file_format") else "json"
+        self._sufix = config.get("sufix") if config.get("sufix") else "place"
+
+    def finish(self):
+        self.logger.info("finishing place writer")
+
+    def auto_boot(self):
+        # make sure root dir exists
+        if os.path.isdir(self._root_path):
+            self.logger.info("root path where results will be written exists")
+        else:
+            self.logger.error("root path where results will be written does not exist")
+            raise Exception("results directory does not exist")
+
+    def write(self, element):
+        if element.get("name"):
+            file_name = "{name}_{sufix}.{format}".format(
+                name="{postal_code}_{name}".format(postal_code=element.get("zip_code"),
+                                                   name=element.get("name").replace(" ", "_")),
+                format=self._file_format,
+                sufix=self._sufix)
+            result_file_path = os.path.join(self._root_path, file_name)
+            with open(result_file_path, 'w') as f:
+                json.dump(element, f)
+            return True
+        else:
+            self.logger.error("there are errors trying to write the following element: ")
+            self.logger.error(element)
+            return False
+

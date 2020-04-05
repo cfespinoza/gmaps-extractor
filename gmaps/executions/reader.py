@@ -14,9 +14,9 @@ class ExecutionDbReader(DbReader):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.db = None
         self._read_execution_info = """
-            SELECT a.zip_code as zip_code, a.gmaps_url as gmaps_url, b.place_type as place_type,
+            SELECT a.zip_code as zip_code, a.gmaps_url as gmaps_url, b.place_type as place_type, a.country as country
             FROM zip_code_info as a
-            JOIN execution_info as b on a.zip_code = b.zip_code and a.country = b.country
+            JOIN execution_info as b on a.zip_code = b.zip_code and lcase(a.country) = lcase(b.country)
         """
 
     def finish(self):
@@ -36,9 +36,11 @@ class ExecutionDbReader(DbReader):
         try:
             cursor.execute(self._read_execution_info)
             results = cursor.fetchall()
-            # todo read country from db too
-            for zip, url, types in results:
-                executions.append({"postal_code": str(zip), "base_url": url, "types": types})
+            for zip_code, url, types, country in results:
+                executions.append({"postal_code": str(zip_code),
+                                   "base_url": url,
+                                   "types": str(types).split(","),
+                                   "country": str(country).capitalize()})
         except Exception as e:
             self.logger.error("something went wrong trying to retrieve execution info")
             self.logger.error(str(e))
