@@ -4,7 +4,7 @@ import os
 
 import mysql.connector
 
-from gmaps.writer.writer import FileWriter, DbWriter
+from gmaps.commons.writer.writer import FileWriter, DbWriter
 
 
 class UrlFileWriter(FileWriter):

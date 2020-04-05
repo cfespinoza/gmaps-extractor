@@ -29,3 +29,19 @@ def get_obj_from_file(file_path=None):
 def validate_required_keys(keys=None, obj=None):
     all_present = [k in obj.keys() for k in keys]
     return all(all_present)
+
+
+def get_zip_codes_obj_config(input_config=None, reader=None):
+    if input_config.get("type") == "local":
+        return input_config.get("local")
+    elif input_config.get("type") == "file":
+        config = input_config.get("file")
+        config.update({"zip_codes": get_obj_from_file(config.get("file_path"))})
+        return config
+    elif input_config.get("type") == "db":
+        if reader:
+            return reader.read()
+        else:
+            return None
+    else:
+        return None

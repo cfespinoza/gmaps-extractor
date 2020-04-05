@@ -1,9 +1,8 @@
-import json
 import logging
 
 import mysql.connector
 
-from gmaps.writer.writer import DbWriter
+from gmaps.commons.writer.writer import DbWriter
 
 
 class MySqlWriter(DbWriter):

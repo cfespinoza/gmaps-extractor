@@ -2,7 +2,7 @@ import logging
 import time
 
 from gmaps.commons.commons import validate_required_keys
-from gmaps.extractor.extractor import AbstractGMapsExtractor
+from gmaps.commons.extractor.extractor import AbstractGMapsExtractor
 from selenium.webdriver.support import expected_conditions as ec
 from gmaps.url.writer import UrlFileWriter, UrlDbWriter
 

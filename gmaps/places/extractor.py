@@ -4,7 +4,7 @@ import time
 
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException
 
-from gmaps.extractor.extractor import AbstractGMapsExtractor
+from gmaps.commons.extractor.extractor import AbstractGMapsExtractor
 from selenium.webdriver.support import expected_conditions as ec
 
 from gmaps.places.writer import MySqlWriter

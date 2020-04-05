@@ -28,7 +28,7 @@ def create_schema(host=None, user=None, passwd=None, db_name=None):
         CREATE TABLE IF NOT EXISTS commercial_premise (
             id INT NOT NULL AUTO_INCREMENT,
             name VARCHAR(100) NOT NULL UNIQUE,
-            zip_code INT(5) NOT NULL,
+            zip_code VARCHAR(5) NOT NULL,
             coordinates VARCHAR(600),
             telephone_number VARCHAR(25),
             opening_hours VARCHAR(600),
@@ -85,10 +85,18 @@ def create_schema(host=None, user=None, passwd=None, db_name=None):
         )
     """
 
-    cursor.execute(sql_main_table)
-    cursor.execute(sql_comments)
-    cursor.execute(sql_ocupation)
-    cursor.execute(sql_zip_codes_info)
+    sql_execution_table = """
+        CREATE TABLE IF NOT EXISTS execution_info (
+            id INT NOT NULL AUTO_INCREMENT,
+            zip_code VARCHAR(5) NOT NULL,
+            place_type VARCHAR(600) NOT NULL,
+            PRIMARY KEY(id)
+        )
+    """
+
+    tables = [sql_main_table, sql_comments, sql_ocupation, sql_zip_codes_info, sql_execution_table]
+    for t in tables:
+        cursor.execute(t)
     cursor.close()
     db.close()
 
@@ -104,7 +112,9 @@ def drop_schema(host=None, user=None, passwd=None, db_name=None):
     drop_sql = ["DROP TABLE commercial_premise_occupation",
                 "DROP TABLE commercial_premise_comments",
                 "DROP TABLE commercial_premise",
-                "DROP TABLE zip_code_info"]
+                "DROP TABLE zip_code_info",
+                "DROP TABLE execution_info"
+                ]
     for sql in drop_sql:
         try:
             cursor.execute(sql)
