@@ -4,7 +4,7 @@
   "log_level": "INFO",
   "log_dir": "/home/cflores/cflores_workspace/gmaps-extractor/results",
   "input_config": {
-    "type": "local",
+    "type": "file",
     "local": {
       "country": "spain",
       "zip_codes": [28047]

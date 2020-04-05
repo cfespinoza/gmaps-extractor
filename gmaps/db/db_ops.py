@@ -78,7 +78,7 @@ def create_schema(host=None, user=None, passwd=None, db_name=None):
     sql_zip_codes_info = """
         CREATE TABLE IF NOT EXISTS zip_code_info (
             id INT NOT NULL AUTO_INCREMENT,
-            zip_code INT(5) NOT NULL,
+            zip_code VARCHAR(5) NOT NULL,
             gmaps_url VARCHAR(600) NOT NULL,
             gmaps_coordinates VARCHAR(100) NOT NULL,
             PRIMARY KEY(id)
