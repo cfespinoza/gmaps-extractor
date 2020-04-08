@@ -1,0 +1,92 @@
+1  apt-get install git
+2  snap install git
+3  uname
+4  uname -a
+5  yum install git
+6  ping database-1.chgxrutzqyvi.eu-central-1.rds.amazonaws.com
+7  python
+8  git
+9  git clone https://github.com/cfespinoza/gmaps-extractor
+10  ll
+11  pwd
+12  cd gmaps-extractor/
+13  ll
+14  ll resources/
+15  ll
+16  make package
+17  pip
+18  whereis pip
+19  /usr/bin/pip3.7 install -U requirements.txt
+20  /usr/bin/pip3.7 install -U requirements.txt
+21  /usr/bin/pip3.7 install -U -r requirements.txt
+22  /usr/bin/pip3.7 install -U setuptools
+23  /usr/bin/pip3.7 install -U -r requirements.txt
+24  python3 setup.py sdist
+25  ll
+26  ll dist/
+27  /usr/bin/pip3.7 install dist/gmaps-extractor-0.1.0.tar.gz
+28  python3 scripts/utils/init_db.py
+29  ll
+30  python3 scripts/utils/init_db.py
+31  python3 ./scripts/utils/init_db.py
+32  ll
+33  python
+34  llscripts
+35  ll scripts
+36  scripts/utils/init_db.py
+37  python3 scripts/utils/init_db.py
+38  vi scripts/utils/init_db.py
+39  python3 scripts/utils/init_db.py
+40  python3 scripts/utils/init_db.py  --help
+41  python3 scripts/utils/init_db.py  -s database-1.chgxrutzqyvi.eu-central-1.rds.amazonaws.com -u gmaps -p oIc1burIsKZYLRxKjZPN -d innodb
+42  nc
+43  python3 scripts/utils/init_db.py  -s database-1.chgxrutzqyvi.eu-central-1.rds.amazonaws.com -u gmaps -p oIc1burIsKZYLRxKjZPN -d innodb
+44  ll
+45  vi dbconn.json
+46  cat /proc/cpuinfo | grep processor | wc -l
+47  gmaps-extractor -cp 48005 -d $(pwd)/resources/chromedriver -t Restaurants Bars -p 1 -n 3 -m remote -e 2 -dc $(pwd)/resources/dbconfig.json
+48  /usr/bin/pip3.7 install dist/gmaps-extractor-0.1.0.tar.gz
+49  gmaps-extractor -cp 48005 -d $(pwd)/resources/chromedriver -t Restaurants Bars -p 1 -n 3 -m remote -e 2 -dc $(pwd)/resources/dbconfig.json
+50  ll /usr/local/lib/python3.7/site-packages/gmaps/
+51  ll /usr/local/lib/python3.7/site-packages/gmaps/gmaps_extractor.py -cp 48005 -d $(pwd)/resources/chromedriver -t Restaurants Bars -p 1 -n 3 -m remote -e 2 -dc $(pwd)/resources/dbconfig.json
+52  python3 /usr/local/lib/python3.7/site-packages/gmaps/gmaps_extractor.py -cp 48005 -d $(pwd)/resources/chromedriver -t Restaurants Bars -p 1 -n 3 -m remote -e 2 -dc $(pwd)/resources/dbconfig.json
+53  install -y libglib2.0-0=2.50.3-2     libnss3=2:3.26.2-1.1+deb9u1     libgconf-2-4=3.2.6-4+b1 \
+54  yum install -y libglib2.0-0=2.50.3-2 libnss3=2:3.26.2-1.1+deb9u1 libgconf-2-4=3.2.6-4+b1 libfontconfig1=2.11.0-6.7+b1 chromium-browser
+55  yum install -y libglib2.0-0=2.50.3-2 libnss3=2:3.26.2-1.1+deb9u1 libgconf-2-4=3.2.6-4+b1 libfontconfig1=2.11.0-6.7+b1 chromium-browser
+56  yum install chrome
+57  wget https://chromedriver.storage.googleapis.com/index.html?path=81.0.4044.69/
+58  ll
+59  rm index.html\?path\=81.0.4044.69%2F
+60  yum install -y unzip xvfb libxi6 libgconf-2-4
+61  yum install default-jdk
+62  curl https://intoli.com/install-google-chrome.sh | bash
+63  sudo mv /usr/bin/google-chrome-stable /usr/bin/google-chrome
+64  google-chrome --version && which google-chrome
+65  python3 /usr/local/lib/python3.7/site-packages/gmaps/gmaps_extractor.py -cp 48005 -d $(pwd)/resources/chromedriver -t Restaurants Bars -p 1 -n 3 -m remote -e 2 -dc $(pwd)/resources/dbconfig.json
+66  wget https://chromedriver.storage.googleapis.com/80.0.3987.106/chromedriver_linux64.zip
+67  unzip chromedriver_linux64.zip
+68  ll
+69  # python3 /usr/local/lib/python3.7/site-packages/gmaps/gmaps_extractor.py -cp 48005 -d $(pwd)/resources/chromedriver -t Restaurants Bars -p 1 -n 3 -m remote -e 2 -dc $(pwd)/resources/dbconfig.json
+70  python3 /usr/local/lib/python3.7/site-packages/gmaps/gmaps_extractor.py -cp 48005 -d $(pwd)/resources/chromedriver -t Restaurants Bars -p 1 -n 3 -m remote -e 2 -dc $(pwd)/resources/dbconfig.json -d $(pwd)/chromedriver
+71  # python3 /usr/local/lib/python3.7/site-packages/gmaps/gmaps_extractor.py -cp 48005 -d $(pwd)/resources/chromedriver -t Restaurants Bars -p 1 -n 3 -m remote -e 2 -dc $(pwd)/resources/dbconfig.json -d $(pwd)/chromedriver
+72  # python3 /usr/local/lib/python3.7/site-packages/gmaps/gmaps_extractor.py
+73  ll
+74  cd gmaps
+75  ll
+76  cd extractor/
+77  ll
+78  vi extractor.py
+79  cd ..
+80  cd ..
+81  python3 setup.py sdist
+82  # python
+83  /usr/bin/pip3.7 install dist/gmaps-extractor-0.1.0.tar.gz
+84  python3 /usr/local/lib/python3.7/site-packages/gmaps/gmaps_extractor.py -cp 48005 -d $(pwd)/resources/chromedriver -t Restaurants Bars -p 1 -n 3 -m remote -e 2 -dc $(pwd)/resources/dbconfig.json -d $(pwd)/chromedriver
+85  vi /usr/local/lib/python3.7/site-packages/gmaps/gmaps_extractor.py
+86  vi /usr/local/lib/python3.7/site-packages/gmaps/extractor/extractor.py
+87  python3 /usr/local/lib/python3.7/site-packages/gmaps/gmaps_extractor.py -cp 48005 -d $(pwd)/resources/chromedriver -t Restaurants Bars -p 1 -n 3 -m remote -e 2 -dc $(pwd)/resources/dbconfig.json -d $(pwd)/chromedriver
+88  # python3 /usr/local/lib/python3.7/site-packages/gmaps/gmaps_extractor.py -cp 48005 -d $(pwd)/resources/chromedriver -t Restaurants Bars -p 1 -n 3 -m remote -e 2 -dc $(pwd)/dbconfig.json -d $(pwd)/chromedriver
+89  ll
+90  # python3 /usr/local/lib/python3.7/site-packages/gmaps/gmaps_extractor.py -cp 48005 -d $(pwd)/resources/chromedriver -t Restaurants Bars -p 1 -n 3 -m remote -e 2 -dc $(pwd)/dbconfg.json -d $(pwd)/chromedriver
+91  python3 /usr/local/lib/python3.7/site-packages/gmaps/gmaps_extractor.py -cp 48005 -d $(pwd)/resources/chromedriver -t Restaurants Bars -p 1 -n 3 -m remote -e 2 -dc $(pwd)/dbconn.json -d $(pwd)/chromedriver
+92  history

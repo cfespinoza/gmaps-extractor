@@ -12,7 +12,7 @@ class AbstractGMapsExtractor:
         super(AbstractGMapsExtractor, self).__init__()
         self.logger = logging.getLogger(self.__class__.__name__)
         self._default_driver_args = ["--disable-extensions", "--disable-gpu", "start-maximized",
-                                     "disable-infobars", "--headless"]
+                                     "disable-infobars", "--headless", "--no-sandbox", "--disable-dev-shm-usage"]
         self._default_experimental_driver_args = {}
         self.shared_result_elements_xpath_query = "//div[contains(@class, 'section-result-content')]"
         self._driver_location = driver_location
@@ -26,6 +26,7 @@ class AbstractGMapsExtractor:
         self.sleep_xl = 20
         self._output_config = output_config
         self._writer = None
+        self._postal_code = None
 
     def _get_driver_config(self, driver_arguments=None, experimental_arguments=None):
         chrome_options = webdriver.ChromeOptions()
@@ -53,9 +54,10 @@ class AbstractGMapsExtractor:
         return driver
 
     def force_sleep(self, sleep_time=0):
-        self.logger.info("forcing to sleep for -{seconds}- seconds".format(seconds=sleep_time))
+        self.logger.debug("-{postal_code}- forcing to sleep for -{seconds}- seconds".format(postal_code=self._postal_code,
+                                                                                          seconds=sleep_time))
         time.sleep(sleep_time)
-        self.logger.info("awaking... the process continues...")
+        self.logger.debug("-{postal_code}- awaking... the process continues...".format(postal_code=self._postal_code))
 
     def finish(self):
         if self._driver:

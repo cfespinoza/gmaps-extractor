@@ -1,0 +1,41 @@
+{
+  "driver_path": "/home/cflores/cflores_workspace/gmaps-extractor/resources/chromedriver",
+  "executors": 10,
+  "log_level": "INFO",
+  "log_dir": "/home/cflores/cflores_workspace/gmaps-extractor/results",
+  "input_config": {
+    "type": "file",
+    "local": {
+      "country": "spain",
+      "zip_codes": [28047]
+    },
+    "file": {
+      "country": "spain",
+      "file_path": "/home/cflores/cflores_workspace/gmaps-extractor/resources/zip_codes_spain.json"
+    },
+    "db": {
+      "type": "mysql",
+      "config": {
+        "host": "localhost",
+        "database": "gmaps",
+        "db_user": "root",
+        "db_pass": "1234"
+      }
+    }
+  },
+  "output_config": {
+    "type": "db",
+    "file": {
+      "results_path": "/home/cflores/cflores_workspace/gmaps-extractor/results"
+    },
+    "db": {
+      "type": "mysql",
+      "config": {
+        "host": "localhost",
+        "database": "gmaps",
+        "db_user": "root",
+        "db_pass": "1234"
+      }
+    }
+  }
+}

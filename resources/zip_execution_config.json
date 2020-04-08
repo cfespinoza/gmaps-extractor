@@ -1,0 +1,49 @@
+{
+  "driver_path": "/home/cflores/cflores_workspace/gmaps-extractor/resources/chromedriver",
+  "executors": 10,
+  "log_level": "INFO",
+  "log_dir": "/home/cflores/cflores_workspace/gmaps-extractor/results",
+  "results_pages": 1,
+  "num_reviews": 3,
+  "input_config": {
+    "type": "db",
+    "local": {
+      "country": "spain",
+      "zip_codes": [
+        {"zip_code":"28047", "place_type": "Restaurant,Bar",
+          "gmaps_url": "https://www.google.com/maps/place/28047+Madrid/@40.3911256,-3.763457,14z"
+        },
+        {"zip_code":"50685", "place_type": "Restaurant,Bar",
+          "gmaps_url": "https://www.google.com/maps/place/50685+Bag%C3%BC%C3%A9s,+Zaragoza/@42.5528422,-1.1823755,11z"}
+      ]
+    },
+    "file": {
+      "country": "spain",
+      "file_path": "/home/cflores/cflores_workspace/gmaps-extractor/resources/zip_codes_places_spain.json"
+    },
+    "db": {
+      "type": "mysql",
+      "config": {
+        "host": "localhost",
+        "database": "gmaps",
+        "db_user": "root",
+        "db_pass": "1234"
+      }
+    }
+  },
+  "output_config": {
+    "type": "db",
+    "file": {
+      "results_path": "/home/cflores/cflores_workspace/gmaps-extractor/results"
+    },
+    "db": {
+      "type": "mysql",
+      "config": {
+        "host": "localhost",
+        "database": "gmaps",
+        "db_user": "root",
+        "db_pass": "1234"
+      }
+    }
+  }
+}
