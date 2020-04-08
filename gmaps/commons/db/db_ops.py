@@ -32,12 +32,12 @@ def create_schema(host=None, user=None, passwd=None, db_name=None):
             coordinates VARCHAR(600),
             telephone_number VARCHAR(25),
             opening_hours VARCHAR(600),
-            type VARCHAR(300),
+            type VARCHAR(600),
             score FLOAT DEFAULT 0.0,
             total_scores INT(10) DEFAULT 0,
             price_range VARCHAR(5),
-            style VARCHAR(300),
-            address VARCHAR(300),
+            style VARCHAR(600),
+            address VARCHAR(600),
             date DATE NOT NULL,
             PRIMARY KEY(ID)
         )
