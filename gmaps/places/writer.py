@@ -2,7 +2,7 @@ import json
 import logging
 import os
 
-import mysql.connector
+import psycopg2
 
 from gmaps.commons.writer.writer import DbWriter, FileWriter
 
@@ -36,7 +36,7 @@ class PlaceDbWriter(DbWriter):
         self.auto_boot()
 
     def auto_boot(self):
-        self.db = mysql.connector.connect(
+        self.db = psycopg2.connect(
             host=self.host,
             user=self.db_user,
             passwd=self.db_pass,
@@ -105,6 +105,7 @@ class PlaceDbWriter(DbWriter):
                     self.db.commit()
                     element_id = cursor.lastrowid
                 except Exception as e:
+                    self.db.rollback()
                     self.logger.error("error storing commercial premise with -{name}-".format(name=name))
                     self.logger.error(str(e))
                     self.logger.error("wrong value: {values}".format(values=values))
@@ -126,12 +127,14 @@ class PlaceDbWriter(DbWriter):
                     cursor.executemany(self._commercial_premise_occupation_query, values)
                     self.db.commit()
                 except Exception as e:
+                    self.db.rollback()
                     self.logger.error("error during storing occupancy for place: -{name}-".format(name=name))
                     self.logger.error(str(e))
                     self.logger.error("wrong values:")
                     self.logger.error(values)
             inserted = True
         except Exception as e:
+            self.db.rollback()
             self.logger.error("error during writing data for place: -{name}-".format(name=name))
             self.logger.error(str(e))
             self.logger.error("wrong values:")

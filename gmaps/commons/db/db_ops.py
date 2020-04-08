@@ -1,14 +1,14 @@
 import argparse
 import json
-import mysql.connector
+import psycopg2
 
 
 def create_database(host=None, user=None, passwd=None, db_name=None):
     sql_create_database = 'CREATE DATABASE IF NOT EXISTS `{db_name}` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci'
-    db = mysql.connector.connect(
+    db = psycopg2.connect(
         host=host,
         user=user,
-        passwd=passwd
+        password=passwd
     )
     cursor = db.cursor()
     cursor.execute(sql_create_database.format(db_name=db_name))
@@ -17,7 +17,7 @@ def create_database(host=None, user=None, passwd=None, db_name=None):
 
 
 def create_schema(host=None, user=None, passwd=None, db_name=None):
-    db = mysql.connector.connect(
+    db = psycopg2.connect(
         host=host,
         user=user,
         passwd=passwd,
@@ -26,7 +26,7 @@ def create_schema(host=None, user=None, passwd=None, db_name=None):
     cursor = db.cursor()
     sql_main_table = """
         CREATE TABLE IF NOT EXISTS commercial_premise (
-            id INT NOT NULL AUTO_INCREMENT,
+            id SERIAL,
             name VARCHAR(100) NOT NULL UNIQUE,
             zip_code VARCHAR(5) NOT NULL,
             coordinates VARCHAR(600),
@@ -45,11 +45,10 @@ def create_schema(host=None, user=None, passwd=None, db_name=None):
 
     sql_comments = """
         CREATE TABLE IF NOT EXISTS commercial_premise_comments (
-            id INT NOT NULL AUTO_INCREMENT,
+            id SERIAL,
             commercial_premise_id INT NOT NULL,
             content TEXT,
             PRIMARY KEY(id),
-            INDEX prem_ind (commercial_premise_id),
             date DATE NOT NULL,
             FOREIGN KEY (commercial_premise_id)
                 REFERENCES commercial_premise(id)
@@ -60,14 +59,13 @@ def create_schema(host=None, user=None, passwd=None, db_name=None):
 
     sql_ocupation = """
         CREATE TABLE IF NOT EXISTS commercial_premise_occupation (
-            id INT NOT NULL AUTO_INCREMENT,
+            id SERIAL,
             commercial_premise_id INT NOT NULL,
             week_day VARCHAR (50),
             time_period VARCHAR (50),
             occupation FLOAT DEFAULT 0.0,
             date DATE NOT NULL,
             PRIMARY KEY(id),
-            INDEX prem_ind (commercial_premise_id),
             FOREIGN KEY (commercial_premise_id)
                 REFERENCES commercial_premise(id)
                 ON DELETE CASCADE
@@ -77,7 +75,7 @@ def create_schema(host=None, user=None, passwd=None, db_name=None):
 
     sql_zip_codes_info = """
         CREATE TABLE IF NOT EXISTS zip_code_info (
-            id INT NOT NULL AUTO_INCREMENT,
+            id SERIAL,
             zip_code VARCHAR(5) NOT NULL,
             gmaps_url VARCHAR(600) NOT NULL,
             gmaps_coordinates VARCHAR(100) NOT NULL,
@@ -88,7 +86,7 @@ def create_schema(host=None, user=None, passwd=None, db_name=None):
 
     sql_execution_table = """
         CREATE TABLE IF NOT EXISTS execution_info (
-            id INT NOT NULL AUTO_INCREMENT,
+            id SERIAL,
             zip_code VARCHAR(5) NOT NULL,
             place_type VARCHAR(600) NOT NULL,
             country VARCHAR(100) NOT NULL,
@@ -104,7 +102,7 @@ def create_schema(host=None, user=None, passwd=None, db_name=None):
 
 
 def drop_schema(host=None, user=None, passwd=None, db_name=None):
-    db = mysql.connector.connect(
+    db = psycopg2.connect(
         host=host,
         user=user,
         passwd=passwd,
@@ -120,7 +118,7 @@ def drop_schema(host=None, user=None, passwd=None, db_name=None):
     for sql in drop_sql:
         try:
             cursor.execute(sql)
-        except mysql.connector.errors.ProgrammingError:
+        except psycopg2.errors.ProgrammingError:
             pass
         except Exception:
             pass

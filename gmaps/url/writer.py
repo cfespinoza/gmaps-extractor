@@ -2,7 +2,7 @@ import json
 import logging
 import os
 
-import mysql.connector
+import psycopg2
 
 from gmaps.commons.writer.writer import FileWriter, DbWriter
 
@@ -55,7 +55,7 @@ class UrlDbWriter(DbWriter):
         self.db.close()
 
     def auto_boot(self):
-        self.db = mysql.connector.connect(
+        self.db = psycopg2.connect(
             host=self.host,
             user=self.db_user,
             passwd=self.db_pass,
@@ -75,6 +75,7 @@ class UrlDbWriter(DbWriter):
             self.db.commit()
             inserted = True
         except Exception as e:
+            self.db.rollback()
             self.logger.error("error during writing data for postal code: -{zip_code}-".format(
                 zip_code=zip_code))
             self.logger.error(str(e))
