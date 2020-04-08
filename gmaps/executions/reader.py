@@ -1,6 +1,6 @@
 import logging
 
-import mysql.connector
+import psycopg2
 
 from gmaps.commons.reader.reader import DbReader
 
@@ -23,7 +23,7 @@ class ExecutionDbReader(DbReader):
         self.db.close()
 
     def auto_boot(self):
-        self.db = mysql.connector.connect(
+        self.db = psycopg2.connect(
             host=self.host,
             user=self.db_user,
             passwd=self.db_pass,
