@@ -15,7 +15,9 @@ echo "----- check chrome installation and version"
 google-chrome --version && which google-chrome
 
 wget https://chromedriver.storage.googleapis.com/80.0.3987.106/chromedriver_linux64.zip
-unzin chromedriver_linux64.zip
+unzip chromedriver_linux64.zip
+
+sudo yum install -y git python3
 
 echo "============================================================================="
 echo "===== system dependencies installed"
@@ -42,7 +44,7 @@ echo "==========================================================================
 echo "----- entering project"
 cd ${cwd}/${repository_name}
 echo "----- installing pip dependencies"
-pip3 install -U setuptools
+# pip3 install -U setuptools
 pip3 install -r requirements.txt
 
 echo "----- building project"

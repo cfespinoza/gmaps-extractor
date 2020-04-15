@@ -1,4 +1,4 @@
 selenium==3.141.0
 urllib3==1.25.8
 wheel==0.34.2
-mysql-connector-python-rf==2.2.2
+psycopg2-binary==2.8.5
