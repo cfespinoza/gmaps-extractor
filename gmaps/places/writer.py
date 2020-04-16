@@ -17,8 +17,8 @@ class PlaceDbWriter(DbWriter):
         self.db = None
         self._commercial_premise_query = """
                     INSERT INTO commercial_premise 
-                        (name, zip_code, coordinates, telephone_number, opening_hours, type, score, total_scores, price_range, style, address, date) 
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        (name, zip_code, coordinates, telephone_number, opening_hours, type, score, total_scores, price_range, style, address, date, execution_places_types) 
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """
         self._commercial_premise_comments_query = """
                             INSERT INTO commercial_premise_comments
@@ -39,7 +39,7 @@ class PlaceDbWriter(DbWriter):
         self.db = psycopg2.connect(
             host=self.host,
             user=self.db_user,
-            passwd=self.db_pass,
+            password=self.db_pass,
             database=self.db_name
         )
 
@@ -86,6 +86,7 @@ class PlaceDbWriter(DbWriter):
         opening_hours = ",".join(op_values) if op_values else None
         score = float(element.get("score").replace(",", ".")) if element.get("score") else None
         total_score = int(element.get("total_scores").replace(",", "").replace(".", "")) if element.get("total_scores") else None
+        execution_places_types = element.get("execution_places_types", None)
         inserted = False
         try:
             cursor.execute(self._find_place_query, (name,))
@@ -97,7 +98,7 @@ class PlaceDbWriter(DbWriter):
             else:
                 values = (
                     name, zip_code, coordinates, telephone, opening_hours, premise_type, score, total_score,
-                    price_range, style, address, date
+                    price_range, style, address, date, execution_places_types
                 )
                 try:
                     self.logger.info("storing commercial premise in database")

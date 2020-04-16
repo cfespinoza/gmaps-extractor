@@ -87,9 +87,10 @@ def scrap_zip_code(arguments):
     num_reviews = arguments.get("num_reviews")
     output_config = arguments.get("output_config")
     extraction_date = arguments.get("extraction_date")
+    places_types = arguments.get("places_types")
     scraper = OptimizedResultsExtractor(driver_location=driver_location,
                                         postal_code=postal_code,
-                                        places_types=arguments.get("places_types"),
+                                        places_types=places_types,
                                         num_pages=arguments.get("num_pages"),
                                         base_url=arguments.get("base_url"))
     results = scraper.scrap()
@@ -99,6 +100,7 @@ def scrap_zip_code(arguments):
                        "driver_location": driver_location,
                        "num_reviews": num_reviews,
                        "output_config": output_config,
+                       "places_types": places_types,
                        "extraction_date": extraction_date} for name, url in results.items()]
     return parsed_results
 
@@ -111,12 +113,14 @@ def scrap_place(arguments):
     output_config = arguments.get("output_config")
     postal_code = arguments.get("postal_code")
     extraction_date = arguments.get("extraction_date")
+    places_types = arguments.get("places_types")
     scraper = PlacesExtractor(driver_location=driver_location,
                               url=url,
                               place_name=place_name,
                               num_reviews=num_reviews,
                               output_config=output_config,
                               postal_code=postal_code,
+                              places_types=places_types,
                               extraction_date=extraction_date)
     results = scraper.scrap()
     return results

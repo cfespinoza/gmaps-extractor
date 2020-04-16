@@ -14,7 +14,7 @@ from gmaps.places.writer import PlaceDbWriter, PlaceFileWriter
 class PlacesExtractor(AbstractGMapsExtractor):
 
     def __init__(self, driver_location: None, url: None, place_name: None, num_reviews: None, output_config: None,
-                 postal_code: None, extraction_date: None):
+                 postal_code: None, places_types: None, extraction_date: None):
         super().__init__(driver_location, output_config)
         self.logger = logging.getLogger(self.__class__.__name__)
         self._place_name = place_name
@@ -58,6 +58,7 @@ class PlacesExtractor(AbstractGMapsExtractor):
         self._postal_code = postal_code
         self._extraction_date = extraction_date
         self._output_config = output_config
+        self._places_types = "+".join(places_types)
         self.auto_boot()
 
     def boot_writer(self):
@@ -160,6 +161,7 @@ class PlacesExtractor(AbstractGMapsExtractor):
             "comments": comments_list,
             "zip_code": self._postal_code,
             "date": self._extraction_date,
+            "execution_places_types": self._places_types,
             "price_range": price_range,
             "style": style,
             "premise_type": premise_type,

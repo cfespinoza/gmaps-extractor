@@ -40,6 +40,7 @@ def create_schema(host=None, user=None, passwd=None, db_name=None):
             style VARCHAR(600),
             address VARCHAR(600),
             date DATE NOT NULL,
+            execution_places_types VARCHAR(600), 
             PRIMARY KEY(ID)
         )
     """
