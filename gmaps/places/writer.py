@@ -18,7 +18,7 @@ class PlaceDbWriter(DbWriter):
         self._commercial_premise_query = """
                     INSERT INTO commercial_premise 
                         (name, zip_code, coordinates, telephone_number, opening_hours, type, score, total_scores, price_range, style, address, date, execution_places_types) 
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id;
                     """
         self._commercial_premise_comments_query = """
                             INSERT INTO commercial_premise_comments
@@ -32,7 +32,7 @@ class PlaceDbWriter(DbWriter):
                     )
                     VALUES (%s, %s, %s, %s, %s)
                 """
-        self._find_place_query = """SELECT id FROM commercial_premise WHERE name = %s"""
+        self._find_place_query = """SELECT id FROM commercial_premise WHERE name = %s and date = %s"""
         self.auto_boot()
 
     def auto_boot(self):
@@ -89,12 +89,11 @@ class PlaceDbWriter(DbWriter):
         execution_places_types = element.get("execution_places_types", None)
         inserted = False
         try:
-            cursor.execute(self._find_place_query, (name,))
+            cursor.execute(self._find_place_query, (name, date))
             db_element = cursor.fetchone()
             element_id = None
             if db_element:
-                self.logger.info("commercial premise found in database")
-                element_id = db_element[0]
+                self.logger.info("commercial premise with name -{name}- found in database".format(name=name))
             else:
                 values = (
                     name, zip_code, coordinates, telephone, opening_hours, premise_type, score, total_score,
@@ -103,8 +102,8 @@ class PlaceDbWriter(DbWriter):
                 try:
                     self.logger.info("storing commercial premise in database")
                     cursor.execute(self._commercial_premise_query, values)
+                    element_id = cursor.fetchone()
                     self.db.commit()
-                    element_id = cursor.lastrowid
                 except Exception as e:
                     self.db.rollback()
                     self.logger.error("error storing commercial premise with -{name}-".format(name=name))
@@ -112,28 +111,28 @@ class PlaceDbWriter(DbWriter):
                     self.logger.error("wrong value: {values}".format(values=values))
                     raise Exception("avoid registration: commercial premise with name -{name}- with wrong values"
                                     .format(name=name))
-            # Store comments
-            values = [(element_id, comment.encode('ascii', 'ignore'), date) for comment in element.get("comments", [])]
-            self.logger.info("storing commercial premise comments in database")
-            cursor.executemany(self._commercial_premise_comments_query, values)
-            self.db.commit()
-            # Store occupancy data
-            if element.get("occupancy"):
-                values = []
-                self.logger.info("storing commercial premise occupancy in database")
-                for week_day, content in self.decompose_occupancy_data(element["occupancy"]).items():
-                    if content and content.items():
-                        values += [(element_id, week_day, key, value, date) for key, value in content.items()]
-                try:
-                    cursor.executemany(self._commercial_premise_occupation_query, values)
-                    self.db.commit()
-                except Exception as e:
-                    self.db.rollback()
-                    self.logger.error("error during storing occupancy for place: -{name}-".format(name=name))
-                    self.logger.error(str(e))
-                    self.logger.error("wrong values:")
-                    self.logger.error(values)
-            inserted = True
+                # Store comments
+                values = [(element_id, comment.encode('ascii', 'ignore'), date) for comment in element.get("comments", [])]
+                self.logger.info("storing commercial premise comments in database")
+                cursor.executemany(self._commercial_premise_comments_query, values)
+                self.db.commit()
+                # Store occupancy data
+                if element.get("occupancy"):
+                    values = []
+                    self.logger.info("storing commercial premise occupancy in database")
+                    for week_day, content in self.decompose_occupancy_data(element["occupancy"]).items():
+                        if content and content.items():
+                            values += [(element_id, week_day, key, value, date) for key, value in content.items()]
+                    try:
+                        cursor.executemany(self._commercial_premise_occupation_query, values)
+                        self.db.commit()
+                    except Exception as e:
+                        self.db.rollback()
+                        self.logger.error("error during storing occupancy for place: -{name}-".format(name=name))
+                        self.logger.error(str(e))
+                        self.logger.error("wrong values:")
+                        self.logger.error(values)
+                inserted = True
         except Exception as e:
             self.db.rollback()
             self.logger.error("error during writing data for place: -{name}-".format(name=name))
