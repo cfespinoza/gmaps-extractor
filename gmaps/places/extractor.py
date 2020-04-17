@@ -246,14 +246,20 @@ class PlacesExtractor(AbstractGMapsExtractor):
             name=self._place_name, url=self._url))
         driver = provided_driver if provided_driver else self.get_driver()
         init_time = time.time()
-        driver.get(self._url)
         place_info = None
         result_to_return = None
         try:
-            driver.wait.until(ec.url_changes(self._url))
-            self.force_sleep(self.sleep_m)
-            place_info = self._get_place_info(provided_driver=driver)
-            result_to_return = self.export_data(place_info)
+            is_registered = self._writer.is_registered(self._place_name, self._extraction_date)
+            if is_registered:
+                self.logger.warning("the place: -{name}- for date: -{date}- is already processed".format(
+                    name=self._place_name, date=self._extraction_date))
+                result_to_return = True
+            else:
+                driver.get(self._url)
+                driver.wait.until(ec.url_changes(self._url))
+                self.force_sleep(self.sleep_m)
+                place_info = self._get_place_info(provided_driver=driver)
+                result_to_return = self.export_data(place_info)
         except TimeoutException as te:
             self.logger.warning("{exception} - timeout exception waiting for place -{place}- in url: -{url}-".format(
                 place=self._place_name,

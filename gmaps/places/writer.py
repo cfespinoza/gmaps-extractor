@@ -69,6 +69,24 @@ class PlaceDbWriter(DbWriter):
                             pass
         return occupancy
 
+    def is_registered(self, name, date):
+        cursor = self.db.cursor()
+        is_registered = False
+        try:
+            cursor.execute(self._find_place_query, (name, date))
+            db_element = cursor.fetchone()
+            if db_element and len(db_element):
+                is_registered = True
+            else:
+                is_registered = False
+        except Exception as e:
+            self.logger.error("error checking if place is already registered: -{name}- for date -{date}-".format(
+                name=name, date=date))
+            self.logger.error(str(e))
+        finally:
+            cursor.close()
+            return is_registered
+
     def write(self, element):
         cursor = self.db.cursor()
         # Store element
@@ -162,6 +180,10 @@ class PlaceFileWriter(FileWriter):
         else:
             self.logger.error("root path where results will be written does not exist")
             raise Exception("results directory does not exist")
+
+    def is_registered(self, name, date):
+        # todo by the moment always returns false
+        return False
 
     def write(self, element):
         if element.get("name"):
