@@ -58,7 +58,7 @@ class UrlDbWriter(DbWriter):
         self.db = psycopg2.connect(
             host=self.host,
             user=self.db_user,
-            passwd=self.db_pass,
+            password=self.db_pass,
             database=self.db_name
         )
 

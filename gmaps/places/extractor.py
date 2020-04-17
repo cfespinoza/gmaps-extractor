@@ -14,7 +14,7 @@ from gmaps.places.writer import PlaceDbWriter, PlaceFileWriter
 class PlacesExtractor(AbstractGMapsExtractor):
 
     def __init__(self, driver_location: None, url: None, place_name: None, num_reviews: None, output_config: None,
-                 postal_code: None, extraction_date: None):
+                 postal_code: None, places_types: None, extraction_date: None):
         super().__init__(driver_location, output_config)
         self.logger = logging.getLogger(self.__class__.__name__)
         self._place_name = place_name
@@ -58,6 +58,7 @@ class PlacesExtractor(AbstractGMapsExtractor):
         self._postal_code = postal_code
         self._extraction_date = extraction_date
         self._output_config = output_config
+        self._places_types = "+".join(places_types)
         self.auto_boot()
 
     def boot_writer(self):
@@ -160,6 +161,7 @@ class PlacesExtractor(AbstractGMapsExtractor):
             "comments": comments_list,
             "zip_code": self._postal_code,
             "date": self._extraction_date,
+            "execution_places_types": self._places_types,
             "price_range": price_range,
             "style": style,
             "premise_type": premise_type,
@@ -244,14 +246,20 @@ class PlacesExtractor(AbstractGMapsExtractor):
             name=self._place_name, url=self._url))
         driver = provided_driver if provided_driver else self.get_driver()
         init_time = time.time()
-        driver.get(self._url)
         place_info = None
         result_to_return = None
         try:
-            driver.wait.until(ec.url_changes(self._url))
-            self.force_sleep(self.sleep_m)
-            place_info = self._get_place_info(provided_driver=driver)
-            result_to_return = self.export_data(place_info)
+            is_registered = self._writer.is_registered(self._place_name, self._extraction_date)
+            if is_registered:
+                self.logger.warning("the place: -{name}- for date: -{date}- is already processed".format(
+                    name=self._place_name, date=self._extraction_date))
+                result_to_return = True
+            else:
+                driver.get(self._url)
+                driver.wait.until(ec.url_changes(self._url))
+                self.force_sleep(self.sleep_m)
+                place_info = self._get_place_info(provided_driver=driver)
+                result_to_return = self.export_data(place_info)
         except TimeoutException as te:
             self.logger.warning("{exception} - timeout exception waiting for place -{place}- in url: -{url}-".format(
                 place=self._place_name,

@@ -16,7 +16,7 @@ class ExecutionDbReader(DbReader):
         self._read_execution_info = """
             SELECT a.zip_code as zip_code, a.gmaps_url as gmaps_url, b.place_type as place_type, a.country as country
             FROM zip_code_info as a
-            JOIN execution_info as b on a.zip_code = b.zip_code and lcase(a.country) = lcase(b.country)
+            JOIN execution_info as b on a.zip_code = b.zip_code and LOWER(a.country) = LOWER(b.country)
         """
 
     def finish(self):
@@ -26,7 +26,7 @@ class ExecutionDbReader(DbReader):
         self.db = psycopg2.connect(
             host=self.host,
             user=self.db_user,
-            passwd=self.db_pass,
+            password=self.db_pass,
             database=self.db_name
         )
 
