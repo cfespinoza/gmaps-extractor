@@ -132,16 +132,16 @@ def drop_schema(host=None, user=None, passwd=None, db_name=None):
 
 def get_parser():
     parser = argparse.ArgumentParser(
-        prog='db_ops',
-        usage='-c <db_operation_config>')
+        prog='gmaps-db',
+        usage='gmaps-db -c <db_operation_config>')
     parser.add_argument('-c', '--config_file', nargs="?", help='''
-    configuration file in json format that with the following format:
+    path to configuration file in json format that with the following schema:
         {
             "db_name":"gmaps",
             "host":"localhost",
             "user":"root",
             "passwd":"1234",
-            "operation": "reset" ["reset", "init", "drop"]
+            "operation": "reset"
         } 
     ''', required=True)
 

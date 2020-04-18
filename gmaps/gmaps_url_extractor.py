@@ -24,7 +24,7 @@ def get_parser():
         usage='gmaps_url_extractor.py -c <execution_configuration_file>'
     )
     parser.add_argument('-c', '--config_file', nargs="?", help='''
-    configuration file in json format with the following format:
+    path to configuration file in json format that with the following schema:
         {
           "driver_path": "<path_to_driver>",
           "executors": <number_of_executors>,
@@ -38,17 +38,8 @@ def get_parser():
             },
             "file": {
               "country": "spain",
-              "file_path": "<file where zip codes to extract urls and coordinates is 
-              found in json array format [zp1, zp2..]>"
-            },
-            "db": {
-              "type": "mysql",
-              "config": {
-                "host": "<host>",
-                "database": "<database to connect>",
-                "db_user": "<user>",
-                "db_pass": "<password>"
-              }
+              "file_path": "<file where zip codes to extract urls and coordinates is found in json array format 
+              [zp1, zp2..]>"
             }
           },
           "output_config": {

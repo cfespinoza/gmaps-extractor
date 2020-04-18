@@ -18,7 +18,7 @@ def get_parser():
         usage='gmaps_zip_extractor.py -c <execution_configuration_file>'
     )
     parser.add_argument('-c', '--config_file', nargs="?", help='''
-    configuration file in json format with the following format:
+    path to configuration file in json format that with the following schema:
         {
           "driver_path": "<path_to_driver>",
           "executors": <number_of_executors>,
