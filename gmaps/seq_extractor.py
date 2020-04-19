@@ -1,3 +1,7 @@
+"""
+Script en desuso. Versión no optimizada y sin soporte para volcar información sobre una base de datos.
+"""
+
 import argparse
 import json
 import logging

@@ -1,9 +1,30 @@
+"""
+Este script es el que se ejecuta cuando se llama a la aplicación `gmaps-db -c <execution-config-file>`. Tiene la
+responsabilidad de creación, borrado y reseteo de la base de datos. Sólo se debe llamar a este programa como pre-requisito
+para poder lanzar las ejecuciones de extracción de información.
+"""
+
 import argparse
 import json
 import psycopg2
 
 
 def create_database(host=None, user=None, passwd=None, db_name=None):
+    """Función encargada de crear la base de datos. Puede ser llamada en caso de recibir en la configuración:
+    `operation: init`
+
+    Parameters
+    ----------
+    host: str
+        fqdn de la base de datos a la que se conectará el programa
+    user: str
+        usuario con el que el programa se conectará a la base de datos
+    passwd: str
+        contraseña con la que se el usuario se autenticará en la base de datos
+    db_name: str
+        nombre de la base de datos a la que conectarse
+
+    """
     sql_create_database = "CREATE DATABASE {db_name} WITH ENCODING 'UTF8'" 
     db = psycopg2.connect(
         host=host,
@@ -18,6 +39,21 @@ def create_database(host=None, user=None, passwd=None, db_name=None):
 
 
 def create_schema(host=None, user=None, passwd=None, db_name=None):
+    """Función encargada de crear las tablas en la base de datos. Puede ser llamada en caso de recibir en la
+    configuración: `operation: init` o `operation: reset`
+
+    Parameters
+    ----------
+    host: str
+        fqdn de la base de datos a la que se conectará el programa
+    user: str
+        usuario con el que el programa se conectará a la base de datos
+    passwd: str
+        contraseña con la que se el usuario se autenticará en la base de datos
+    db_name: str
+        nombre de la base de datos a la que conectarse
+
+    """
     db = psycopg2.connect(
         host=host,
         user=user,
@@ -105,6 +141,21 @@ def create_schema(host=None, user=None, passwd=None, db_name=None):
 
 
 def drop_schema(host=None, user=None, passwd=None, db_name=None):
+    """Función encargada de borrar las tablas de la base de datos. Puede ser llamada en caso de recibir en la
+    configuración: `operation: drop` o `operation: reset`
+
+    Parameters
+    ----------
+    host: str
+        fqdn de la base de datos a la que se conectará el programa
+    user: str
+        usuario con el que el programa se conectará a la base de datos
+    passwd: str
+        contraseña con la que se el usuario se autenticará en la base de datos
+    db_name: str
+        nombre de la base de datos a la que conectarse
+
+    """
     db = psycopg2.connect(
         host=host,
         user=user,
@@ -131,17 +182,24 @@ def drop_schema(host=None, user=None, passwd=None, db_name=None):
 
 
 def get_parser():
+    """Función para obtener el parseador de argumentos que se le pasa al programa por línea de comando
+
+    Returns
+    -------
+    parser
+        objecto del tipo `ArgumentParser`
+    """
     parser = argparse.ArgumentParser(
-        prog='db_ops',
-        usage='-c <db_operation_config>')
+        prog='gmaps-db',
+        usage='gmaps-db -c <db_operation_config>')
     parser.add_argument('-c', '--config_file', nargs="?", help='''
-    configuration file in json format that with the following format:
+    path to configuration file in json format that with the following schema:
         {
             "db_name":"gmaps",
             "host":"localhost",
             "user":"root",
             "passwd":"1234",
-            "operation": "reset" ["reset", "init", "drop"]
+            "operation": "reset"
         } 
     ''', required=True)
 
@@ -149,6 +207,12 @@ def get_parser():
 
 
 def db_ops():
+    """Función principal que se encarga de revisar que los argumentos pasados por la configuración es la correcta
+    para realizar una ejecución.
+
+    Esta función no tiene argumentos, pero usa los argumentos pasados por línea de comando cuando se ejecuta. Una vez se
+    encuentra la operación a realizar llama a la función correspondiente.
+    """
     parser = get_parser()
     args = parser.parse_args()
     config = None
