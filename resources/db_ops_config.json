@@ -1,7 +1,7 @@
 {
   "host": "localhost",
   "db_name": "gmaps",
-  "user": "root",
-  "passwd": "fK80DR6KNblTJ0MVm5cnpRp8Hqk8qzgc",
-  "operation": "init"
+  "user": "postgres",
+  "passwd": "1234",
+  "operation": "reset"
 }
