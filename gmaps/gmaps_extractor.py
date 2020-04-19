@@ -1,3 +1,6 @@
+"""
+Script en desuso. Versión no optimizada.
+"""
 import argparse
 import json
 import logging

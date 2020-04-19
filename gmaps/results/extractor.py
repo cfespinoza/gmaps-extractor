@@ -7,6 +7,10 @@ from selenium.webdriver.common.by import By
 
 
 class ResultsExtractor(AbstractGMapsExtractor):
+    """Clase que implementa gmaps.commons.extractor.extractor.AbstractGMapsExtractor con las particularidades necesarias
+    para obtener la información de los resultados de búsqueda de locales comerciales para los tipos de locales y código
+    postal. Actualmente en desuso.
+    """
 
     def __init__(self, driver_location: None, country: None, postal_code: None,
                  places_types: None, num_pages: None):

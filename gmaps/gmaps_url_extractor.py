@@ -1,3 +1,7 @@
+"""
+Script principal que lleva la lógica de más alto nivel para la ejecución de `gmaps-url-scrapper` que se encarga de
+obtener la información para cada código postal.
+"""
 import argparse
 import logging
 import time
@@ -10,6 +14,14 @@ from gmaps.url.extractor import UrlsExtractor
 
 
 def scrape_postal_code_url(parameters):
+    """ Función que crea una instancia de `UrlsExtractor` y ejecuta su función scrap. Esta función es llamada por el
+    pool de procesos para paralelizar la extracción de las urls por código postal.
+
+    Parameters
+    ----------
+    parameters : dict
+        diccionario que contiene los campos para instanciar un objecto de la clase `UrlsExtractor`.
+    """
     scraper = UrlsExtractor(driver_location=parameters.get("driver_location"),
                             country=parameters.get("country"),
                             postal_code=parameters.get("postal_code"),
@@ -19,6 +31,13 @@ def scrape_postal_code_url(parameters):
 
 
 def get_parser():
+    """Función para obtener el parseador de argumentos que se le pasa al programa por línea de comando
+
+    Returns
+    -------
+    parser
+        objecto del tipo `ArgumentParser`
+    """
     parser = argparse.ArgumentParser(
         prog='gmaps-url-scrapper',
         usage='gmaps_url_extractor.py -c <execution_configuration_file>'
@@ -63,6 +82,11 @@ def get_parser():
 
 
 def extract():
+    """Función principal del programa y que lleva la lógica completa para la extracción de las urls por código postal
+    y por país. Los resultados los vuelca directamente en el soporte de salida que se haya establecido en el fichero de
+    configuración que se le haya pasado por línea de comando la ejecución del script o la ejecución del programa
+    `gmaps-url-scrapper`
+    """
     parser = get_parser()
     main_name = "gmaps_url_extractor"
     args = parser.parse_args()
@@ -75,13 +99,19 @@ def extract():
     logger = logging.getLogger(main_name)
     logger.info("configuration that will be used in the extraction is the following")
     logger.info("{config}".format(config=execution_config))
+    # si el fichero de configuración que se ha pasado a la ejecución contiene las claves requeridas se procede a la
+    # ejecución
     if validate_required_keys(keys=required_keys, obj=execution_config):
+        # se obtienen los códigos postales del soporte de entrada establecido en la configuración para los cuales se
+        # extraerán las urls de búsqueda.
         input_config = execution_config.get("input_config")
         output_config = execution_config.get("output_config")
         zip_config = get_zip_codes_obj_config(input_config)
         logger.info("zip codes to extract url: {zip_config}".format(zip_config=zip_config))
         country = zip_config.get("country").capitalize()
         zip_codes = zip_config.get("zip_codes", [])
+        # se construye la lista de objetos que serán los argumentos para la llamada a la función
+        # `scrape_postal_code_url` por cada uno de los procesos que formen el pool de procesos
         results_args_list = [{"country": country,
                               "postal_code": zip_code,
                               "driver_location": execution_config.get("driver_path"),
