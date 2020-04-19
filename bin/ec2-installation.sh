@@ -45,13 +45,13 @@ echo "----- entering project"
 cd ${cwd}/${repository_name}
 echo "----- installing pip dependencies"
 # pip3 install -U setuptools
-pip3 install -r requirements.txt
+pip3 install -r requirements.txt --user
 
 echo "----- building project"
 python3 setup.py sdist
 
 echo "----- installing project"
-pip3 install dist/*.tar
+pip3 install dist/*.tar.gz --user
 
 echo "============================================================================="
 echo "===== project built and installed"
