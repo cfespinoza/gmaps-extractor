@@ -6,38 +6,26 @@
   "results_pages": 1,
   "num_reviews": 3,
   "input_config": {
-    "type": "local",
-    "local": [
-        {"postal_code":"28010", "types": ["Bar"], "base_url": "https://www.google.com/maps/place/28010+Madrid/@40.4322914,-3.7060659,15z", "country": "Spain"},
-        {"postal_code":"28003", "types": ["Bar"], "base_url": "https://www.google.com/maps/place/28003+Madrid/@40.4426868,-3.7228567,14z", "country": "Spain"},
-        {"postal_code":"48005", "types": ["Bar"], "base_url": "https://www.google.com/maps/place/48005+Bilbao,+Biscay/@43.2598164,-2.9304266,15z", "country": "Spain"}
-    ],
-    "file": {
-      "country": "spain",
-      "file_path": "/home/cflores/cflores_workspace/gmaps-extractor/resources/zip_codes_places_spain.json"
-    },
+    "type": "db",
     "db": {
-      "type": "mysql",
+      "type": "postgres",
       "config": {
         "host": "localhost",
         "database": "gmaps",
-        "db_user": "root",
-        "db_pass": "fK80DR6KNblTJ0MVm5cnpRp8Hqk8qzgc"
+        "db_user": "postgres",
+        "db_pass": "1234"
       }
     }
   },
   "output_config": {
     "type": "db",
-    "file": {
-      "results_path": "/home/cflores/cflores_workspace/gmaps-extractor/results"
-    },
     "db": {
-      "type": "mysql",
+      "type": "postgres",
       "config": {
         "host": "localhost",
         "database": "gmaps",
-        "db_user": "root",
-        "db_pass": "fK80DR6KNblTJ0MVm5cnpRp8Hqk8qzgc"
+        "db_user": "postgres",
+        "db_pass": "1234"
       }
     }
   }

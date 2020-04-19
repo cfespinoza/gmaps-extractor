@@ -201,7 +201,7 @@ class PlaceDbWriter(DbWriter):
                     raise Exception("avoid registration: commercial premise with name -{name}- with wrong values"
                                     .format(name=name))
                 # Store comments
-                values = [(element_id, comment.encode('ascii', 'ignore'), date) for comment in element.get("comments", [])]
+                values = [(element_id, comment, date) for comment in element.get("comments", [])]
                 self.logger.info("storing commercial premise comments in database")
                 cursor.executemany(self._commercial_premise_comments_query, values)
                 self.db.commit()
