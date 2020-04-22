@@ -313,7 +313,15 @@ class PlacesExtractor(AbstractGMapsExtractor):
         premise_type = self.get_obj_text(xpath_query=self._premise_type, external_driver=driver)
         opening_value = opening_obj.get_attribute("aria-label").split(",") if opening_obj else []
         occupancy_obj = self._get_occupancy(external_driver=driver)
-        comments_list = self._get_comments(self._place_name, self.sleep_m, external_driver=driver)
+        # se checkea si el local ya existe
+        is_registered = self._writer.is_registered({"name": self._place_name, "date":self._extraction_date,
+                                                    "address": address_obj})
+        comments_list = []
+        if is_registered:
+            self.logger.warning("the place: -{name}- for date: -{date}- located in -{addr}-is already processed".format(
+                name=self._place_name, date=self._extraction_date, addr=address_obj))
+        else:
+            comments_list = self._get_comments(self._place_name, self.sleep_m, external_driver=driver)
         place_info = {
             "name": name_val,
             "score": score_obj,
@@ -480,19 +488,12 @@ class PlacesExtractor(AbstractGMapsExtractor):
         place_info = None
         result_to_return = None
         try:
-            # checkeo si ya existe registro para la fecha de extracción y el nombre del local para evitar volver a
-            # procesarlo
-            is_registered = self._writer.is_registered(self._place_name, self._extraction_date)
-            if is_registered:
-                self.logger.warning("the place: -{name}- for date: -{date}- is already processed".format(
-                    name=self._place_name, date=self._extraction_date))
-                result_to_return = True
-            else:
-                driver.get(self._url)
-                driver.wait.until(ec.url_changes(self._url))
-                self.force_sleep(self.sleep_m)
-                place_info = self._get_place_info(provided_driver=driver)
-                result_to_return = self.export_data(place_info)
+            # empieza el proceso de extracción
+            driver.get(self._url)
+            driver.wait.until(ec.url_changes(self._url))
+            self.force_sleep(self.sleep_m)
+            place_info = self._get_place_info(provided_driver=driver)
+            result_to_return = self.export_data(place_info)
         except TimeoutException as te:
             # en caso de un error de debido a la demora en la carga de la página web, se registra en los logs el error y
             # se vuelve a intentar la extracción llamando a la función  `_scrap`

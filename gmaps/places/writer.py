@@ -77,7 +77,7 @@ class PlaceDbWriter(DbWriter):
                     )
                     VALUES (%s, %s, %s, %s, %s)
                 """
-        self._find_place_query = """SELECT id FROM commercial_premise WHERE name = %s and date = %s"""
+        self._find_place_query = """SELECT id FROM commercial_premise WHERE name = %s and date = %s and address = %s"""
         self.auto_boot()
 
     def auto_boot(self):
@@ -118,13 +118,16 @@ class PlaceDbWriter(DbWriter):
                             pass
         return occupancy
 
-    def is_registered(self, name, date):
+    def is_registered(self, data):
         """Ejecuta la query para comprobar si el local comercial ha sido registrado para la fecha pasada por argumento.
         """
+        name = data.get("name", "")
+        date = data.get("date", "")
+        address = data.get("address", "")
         cursor = self.db.cursor()
         is_registered = False
         try:
-            cursor.execute(self._find_place_query, (name, date))
+            cursor.execute(self._find_place_query, (name, date, address))
             db_element = cursor.fetchone()
             if db_element and len(db_element):
                 is_registered = True
@@ -172,7 +175,7 @@ class PlaceDbWriter(DbWriter):
         execution_places_types = element.get("execution_places_types", None)
         inserted = False
         try:
-            cursor.execute(self._find_place_query, (name, date))
+            cursor.execute(self._find_place_query, (name, date, address))
             db_element = cursor.fetchone()
             element_id = None
             if db_element:
@@ -282,7 +285,7 @@ class PlaceFileWriter(FileWriter):
             self.logger.error("root path where results will be written does not exist")
             raise Exception("results directory does not exist")
 
-    def is_registered(self, name, date):
+    def is_registered(self, data):
         # todo by the moment always returns false
         return False
 

@@ -64,7 +64,7 @@ def create_schema(host=None, user=None, passwd=None, db_name=None):
     sql_main_table = """
         CREATE TABLE IF NOT EXISTS commercial_premise (
             id SERIAL,
-            name VARCHAR(100) NOT NULL UNIQUE,
+            name VARCHAR(600) NOT NULL,
             zip_code VARCHAR(5) NOT NULL,
             coordinates VARCHAR(600),
             telephone_number VARCHAR(25),
@@ -132,7 +132,11 @@ def create_schema(host=None, user=None, passwd=None, db_name=None):
         )
     """
 
-    tables = [sql_main_table, sql_comments, sql_ocupation, sql_zip_codes_info, sql_execution_table]
+    sql_index_creation = """
+        CREATE UNIQUE INDEX commercial_premise_index ON commercial_premise (name, address, date)
+    """
+
+    tables = [sql_main_table, sql_comments, sql_ocupation, sql_zip_codes_info, sql_execution_table, sql_index_creation]
     for t in tables:
         cursor.execute(t)
     db.commit()
