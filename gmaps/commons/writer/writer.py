@@ -28,7 +28,7 @@ class AbstractWriter:
     def auto_boot(self):
         raise NotImplementedError("Method must be implemented in subclass")
 
-    def is_registered(self, name, date):
+    def is_registered(self, data):
         raise NotImplementedError("Method must be implemented in subclass")
 
     def write(self, element):
@@ -62,7 +62,7 @@ class DbWriter(AbstractWriter):
     def write(self, element):
         raise NotImplementedError("Method must be implemented in subclass")
 
-    def is_registered(self, name, date):
+    def is_registered(self, data):
         raise NotImplementedError("Method must be implemented in subclass")
 
 
@@ -90,5 +90,5 @@ class FileWriter(AbstractWriter):
     def write(self, element):
         raise NotImplementedError("Method must be implemented in subclass")
 
-    def is_registered(self, name, date):
+    def is_registered(self, data):
         raise NotImplementedError("Method must be implemented in subclass")
