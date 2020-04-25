@@ -129,21 +129,25 @@ def scrap_zip_code(arguments):
     output_config = arguments.get("output_config")
     extraction_date = arguments.get("extraction_date")
     places_types = arguments.get("places_types")
+    executors = arguments.get("executors")
     scraper = OptimizedResultsExtractor(driver_location=driver_location,
                                         postal_code=postal_code,
                                         places_types=places_types,
                                         num_pages=arguments.get("num_pages"),
                                         base_url=arguments.get("base_url"))
     results = scraper.scrap()
-    parsed_results = [{"url": url,
-                       "place_name": name,
+    parsed_results = [{"url": place_found.get("url"),
+                       "place_name": place_found.get("name"),
+                       "place_address": place_found.get("address"),
                        "postal_code": postal_code,
                        "driver_location": driver_location,
                        "num_reviews": num_reviews,
                        "output_config": output_config,
                        "places_types": places_types,
-                       "extraction_date": extraction_date} for name, url in results.items()]
-    return parsed_results
+                       "extraction_date": extraction_date} for place_found in results]
+    with Pool(processes=executors) as pool:
+        places_results = pool.map(func=scrap_place, iterable=iter(parsed_results))
+    return places_results
 
 
 def scrap_place(arguments):
@@ -163,6 +167,7 @@ def scrap_place(arguments):
     """
     driver_location = arguments.get("driver_location")
     url = arguments.get("url")
+    place_address = arguments.get("place_address")
     place_name = arguments.get("place_name")
     num_reviews = arguments.get("num_reviews")
     output_config = arguments.get("output_config")
@@ -172,6 +177,7 @@ def scrap_place(arguments):
     scraper = PlacesExtractor(driver_location=driver_location,
                               url=url,
                               place_name=place_name,
+                              place_address=place_address,
                               num_reviews=num_reviews,
                               output_config=output_config,
                               postal_code=postal_code,

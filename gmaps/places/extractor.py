@@ -107,8 +107,8 @@ class PlacesExtractor(AbstractGMapsExtractor):
         correspondiente que se haya configurado para la ejecución.
     """
 
-    def __init__(self, driver_location=None, url=None, place_name=None, num_reviews=None, output_config=None,
-                 postal_code=None, places_types=None, extraction_date=None):
+    def __init__(self, driver_location=None, url=None, place_address=None, place_name=None, num_reviews=None,
+                 output_config=None, postal_code=None, places_types=None, extraction_date=None):
         """Constructor de la clase
 
         Parameters
@@ -133,6 +133,7 @@ class PlacesExtractor(AbstractGMapsExtractor):
         super().__init__(driver_location, output_config)
         self.logger = logging.getLogger(self.__class__.__name__)
         self._place_name = place_name
+        self._place_address = place_address
         self._url = url
         self._num_reviews = num_reviews
         self._INDEX_TO_DAY = {
@@ -314,14 +315,14 @@ class PlacesExtractor(AbstractGMapsExtractor):
         opening_value = opening_obj.get_attribute("aria-label").split(",") if opening_obj else []
         occupancy_obj = self._get_occupancy(external_driver=driver)
         # se checkea si el local ya existe
-        is_registered = self._writer.is_registered({"name": self._place_name, "date":self._extraction_date,
-                                                    "address": address_obj})
-        comments_list = []
-        if is_registered:
-            self.logger.warning("the place: -{name}- for date: -{date}- located in -{addr}-is already processed".format(
-                name=self._place_name, date=self._extraction_date, addr=address_obj))
-        else:
-            comments_list = self._get_comments(self._place_name, self.sleep_m, external_driver=driver)
+        # is_registered = self._writer.is_registered({"name": self._place_name, "date": self._extraction_date,
+        #                                             "address": address_obj})
+        comments_list = self._get_comments(self._place_name, self.sleep_m, external_driver=driver)
+        # if is_registered:
+        #     self.logger.warning("the place: -{name}- for date: -{date}- located in -{addr}-is already processed"
+        #     .format(name=self._place_name, date=self._extraction_date, addr=address_obj))
+        # else:
+        #     comments_list = self._get_comments(self._place_name, self.sleep_m, external_driver=driver)
         place_info = {
             "name": name_val,
             "score": score_obj,
@@ -414,6 +415,7 @@ class PlacesExtractor(AbstractGMapsExtractor):
             "name": self._place_name,
             "zip_code": self._postal_code,
             "date": self._extraction_date,
+            "address": self._place_address,
             "extractor_url": self._url
         }
         try:
@@ -424,37 +426,40 @@ class PlacesExtractor(AbstractGMapsExtractor):
             if self._place_name in places_objs.keys():
                 # el nombre del local comercial se encuentra en los resultados y se procede a clickar sobre él y extraer
                 # la información una vez se haya cargado la página del local comercial
-                self.logger.info("place found in search list due to ambiguous name nearby")
+                self.logger.info("-{place}-: found in search list due to ambiguous name nearby".format(
+                    place=self._place_name))
                 found_place = places_objs.get(self._place_name)
                 driver.execute_script("arguments[0].click();", found_place)
                 driver.wait.until(ec.url_changes(driver.current_url))
                 self.force_sleep(self.sleep_m)
                 place_info = self._get_place_info(provided_driver=driver)
             else:
-                self.logger.warning("place was not found in search list. There is something wrong with: {name}".format(
-                    name=self._place_name))
+                self.logger.warning("-{place}-: was not found in search list".format(place=self._place_name))
         except StaleElementReferenceException as sere:
             # se ha detectado un error tratando de acceder a algún elemento del DOM de la página y se vuelve a intentar
             # extraer la información sin volver a procesar ninguna URL. Llamada recursiva a _scrap
             self.logger.error(str(sere))
-            self.logger.warning("problems accessing to -{place}- reviews from ambiguous results: -{url}-".format(
+            self.logger.warning("-{place}-: problems accessing to reviews from ambiguous results: -{url}-".format(
                 place=self._place_name, url=driver.current_url))
-            self.logger.warning("trying to look up reviews again")
+            self.logger.warning(
+                "-{place}-: trying to look up reviews again; StaleElementReferenceException detected".format(
+                    place=self._place_name))
             place_info = self._scrap(driver)
         except TimeoutException as te:
             # se ha detectado de timeout esprando a que la página termine de cargar y se vuelve a intentar a
             # extraer la información sin volver a procesar ninguna URL. Llamada recursiva a _scrap
             self.logger.error(str(te))
-            self.logger.warning("problems accessing to -{place}- reviews from ambiguous results: -{url}-".format(
+            self.logger.warning("-{place}-: problems accessing to reviews from ambiguous results: -{url}-".format(
                 place=self._place_name, url=driver.current_url))
-            self.logger.warning("trying to look up reviews again")
+            self.logger.warning("-{place}-: trying to look up reviews again; TimeoutException detected.")
             place_info = self._scrap(driver)
         except Exception as e:
             # error no controlado durante la extracción de la información. Se sale de la ejecución sin forzar la
             # extracción de la información
             self.logger.error(str(e))
-            self.logger.warning("problems accessing to -{place}- reviews from ambiguous results: -{url}-".format(
+            self.logger.warning("-{place}-: problems accessing to reviews from ambiguous results: -{url}-".format(
                 place=self._place_name, url=driver.current_url))
+            self.logger.warning("-{place}-: trying to look up reviews again; uncaught Exception detected.")
         finally:
             return place_info
 
@@ -481,19 +486,28 @@ class PlacesExtractor(AbstractGMapsExtractor):
         dict
             en caso de que no se haya writer definido
         """
-        logging.info("scrap process for place -{name}- with url -{url}- is starting".format(
+        logging.info("-{name}-: scrapping process for place with url -{url}- is starting".format(
             name=self._place_name, url=self._url))
         driver = provided_driver if provided_driver else self.get_driver()
         init_time = time.time()
         place_info = None
         result_to_return = None
         try:
-            # empieza el proceso de extracción
-            driver.get(self._url)
-            driver.wait.until(ec.url_changes(self._url))
-            self.force_sleep(self.sleep_m)
-            place_info = self._get_place_info(provided_driver=driver)
-            result_to_return = self.export_data(place_info)
+            # checkeo si ya existe registro para la fecha de extracción y el nombre del local para evitar volver a
+            # procesarlo
+            is_registered = self._writer.is_registered({"name": self._place_name, "date": self._extraction_date,
+                                                        "address": self._place_address})
+            if is_registered:
+                self.logger.warning("-{name}-: place in {address} and for date: -{date}- is already processed".format(
+                    name=self._place_name, date=self._extraction_date, address=self._place_address))
+                result_to_return = True
+            else:
+                # empieza el proceso de extracción
+                driver.get(self._url)
+                driver.wait.until(ec.url_changes(self._url))
+                self.force_sleep(self.sleep_m)
+                place_info = self._get_place_info(provided_driver=driver)
+                result_to_return = self.export_data(place_info)
         except TimeoutException as te:
             # en caso de un error de debido a la demora en la carga de la página web, se registra en los logs el error y
             # se vuelve a intentar la extracción llamando a la función  `_scrap`
@@ -502,7 +516,7 @@ class PlacesExtractor(AbstractGMapsExtractor):
                 url=self._url,
                 exception=str(te)
             ))
-            self.logger.warning("forcing to look up information again")
+            self.logger.warning("-{place}-: forcing to look up information again".format(place=self._place_name))
             place_info = self._scrap(provided_driver=driver)
             result_to_return = self.export_data(place_info)
         except StaleElementReferenceException as sere:
@@ -515,19 +529,19 @@ class PlacesExtractor(AbstractGMapsExtractor):
                     url=self._url
                 ))
             self.force_sleep(self.sleep_m)
-            self.logger.warning("forcing to look up information again")
+            self.logger.warning("-{name}-: forcing to look up information again".format(name=self._place_name))
             place_info = self._scrap(provided_driver=driver)
             result_to_return = self.export_data(place_info)
         except Exception as e:
-            self.logger.error("error during reviews extraction for -{name}-: {error}".format(name=self._place_name,
-                                                                                             error=str(e)))
+            self.logger.error("-{name}-: error during reviews extraction: {error}".format(name=self._place_name,
+                                                                                          error=str(e)))
         finally:
             self.finish()
 
         end_time = time.time()
         elapsed = int(end_time - init_time)
-        self.logger.info("process the place -{name}- has took: -{elapsed}- seconds".format(name=self._place_name,
-                                                                                           elapsed=elapsed))
-        logging.info("scrap process for place -{name}- with url -{url}- is finishing".format(
-            name=self._place_name, url=self._url))
+        self.logger.info("-{name}-: scrapping process has took: -{elapsed}- seconds".format(name=self._place_name,
+                                                                                            elapsed=elapsed))
+        self.logger.info("-{name}-: scrapping process with url -{url}- is finishing".format(name=self._place_name,
+                                                                                            url=self._url))
         return result_to_return
