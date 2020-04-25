@@ -130,7 +130,7 @@ def scrap_zip_code(arguments):
     output_config = arguments.get("output_config")
     extraction_date = arguments.get("extraction_date")
     places_types = arguments.get("places_types")
-    executors = arguments.get("places_executors")
+    executors = arguments.get("executors")
     scraper = OptimizedResultsExtractor(driver_location=driver_location,
                                         postal_code=postal_code,
                                         places_types=places_types,
