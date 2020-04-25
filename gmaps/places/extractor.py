@@ -191,9 +191,10 @@ class PlacesExtractor(AbstractGMapsExtractor):
                 self._writer = PlaceFileWriter(config=config)
                 self._writer.auto_boot()
             else:
-                self.logger.error("wrong writer config. required configuration is not present")
-                self.logger.error("make sure the output_config has the required configuration set: {required}"
-                                  .format(required=required_keys))
+                self.logger.error("-{place}-:wrong writer config. required configuration is not present".format(
+                    place=self._place_name))
+                self.logger.error("-{place}-:make sure the output_config has the required configuration set: {required}"
+                                  .format(required=required_keys, place=self._place_name))
         elif self._output_config.get("type") == "db":
             # soporte de salida: `output_config.type="db"`
             config = self._output_config.get("db").get("config")
@@ -202,9 +203,10 @@ class PlacesExtractor(AbstractGMapsExtractor):
                 self._writer = PlaceDbWriter(config=config)
                 self._writer.auto_boot()
             else:
-                self.logger.error("wrong writer config. required configuration is not present")
-                self.logger.error("make sure the output_config has the required configuration set: {required}"
-                                  .format(required=required_keys))
+                self.logger.error("-{place}-:wrong writer config. required configuration is not present".format(
+                    place=self._place_name))
+                self.logger.error("-{place}-:make sure the output_config has the required configuration set: {required}"
+                                  .format(required=required_keys, place=self._place_name))
         elif self._output_config:
             # en caso de no haber establecido el `output_config.type` pero sí se ha definido en `output_config` la
             # configuración de conexión a la base de datos
@@ -213,11 +215,12 @@ class PlacesExtractor(AbstractGMapsExtractor):
                 self._writer = PlaceDbWriter(config=self._output_config)
                 self._writer.auto_boot()
             else:
-                self.logger.error("wrong writer config. required configuration is not present")
-                self.logger.error("make sure the output_config has the required configuration set: {required}"
-                                  .format(required=required_keys))
+                self.logger.error("-{place}-:wrong writer config. required configuration is not present".format(
+                    place=self._place_name))
+                self.logger.error("-{place}-:make sure the output_config has the required configuration set: {required}"
+                                  .format(required=required_keys, place=self._place_name))
         else:
-            self.logger.error("writer type is not supported")
+            self.logger.error("-{place}-: writer type is not supported")
 
     def boot_writer(self):
         """Función que arrancaba y configuraba el writer de este extractor leyendo de la configuración del soporte de
@@ -283,8 +286,8 @@ class PlacesExtractor(AbstractGMapsExtractor):
                     occupancy_by_hour_values = [o.get_attribute("aria-label") for o in occupancy_by_hour]
                     occupancy_obj[day] = occupancy_by_hour_values
         except NoSuchElementException:
-            self.logger.warning("there is no occupancy elements for -{name}-: {url}".format(name=self._place_name,
-                                                                                            url=self._url))
+            self.logger.warning("-{place}-: there is no occupancy elements in: -{url}-".format(place=self._place_name,
+                                                                                               url=self._url))
         return occupancy_obj
 
     def _get_place_info(self, provided_driver=None):
@@ -345,7 +348,7 @@ class PlacesExtractor(AbstractGMapsExtractor):
             "premise_type": premise_type,
             "extractor_url": self._url
         }
-        self.logger.info("info retrieved for place -{name}-".format(name=self._place_name))
+        self.logger.info("-{place}-: info retrieved for place".format(place=self._place_name))
         return place_info
 
     def _get_comments(self, place_name=None, sleep_time=None, external_driver=None):
@@ -368,11 +371,11 @@ class PlacesExtractor(AbstractGMapsExtractor):
         """
         # get all reviews button
         driver = external_driver if external_driver else self.get_driver()
-        self.logger.info("trying to retrieve comments for place -{place}-".format(place=place_name))
+        self.logger.info("-{place}-: trying to retrieve comments".format(place=place_name))
         button_see_all_reviews = self.get_info_obj(self._see_all_reviews_button)
         reviews_elements_list = driver.find_elements_by_class_name(self._review_css_class)
         if len(reviews_elements_list) < self._num_reviews and button_see_all_reviews:
-            self.logger.info("all reviews button has been found")
+            self.logger.debug("-{place}-: all reviews button has been found".format(place=place_name))
             # change page to next comments and iterate
             driver.execute_script("arguments[0].click();", button_see_all_reviews)
             driver.wait.until(ec.url_changes(driver.current_url))
@@ -389,13 +392,13 @@ class PlacesExtractor(AbstractGMapsExtractor):
                 aux_reviews = driver.find_elements_by_class_name(self._review_css_class)
                 have_finished = previous_iteration_found == len(aux_reviews) or len(aux_reviews) >= self._num_reviews
             # At this point the last `self._num_reviews` reviews must be shown
-            self.logger.info("retrieving comment bucle has finished")
+            self.logger.debug("-{place}-: retrieving comment bucle has finished".format(place=place_name))
 
         # extract content of each element
         reviews_elements_list = driver.find_elements_by_class_name(self._review_css_class)
         comments = [elem.text for elem in reviews_elements_list]
-        self.logger.info("found -{total_reviews}- comments for restaurant -{place_name}-".format(
-            total_reviews=len(comments), place_name=place_name))
+        self.logger.info("-{place}-: found -{total_reviews}- comments.".format(total_reviews=len(comments),
+                                                                               place=place_name))
         return comments
 
     def _scrap(self, provided_driver=None):
@@ -430,7 +433,7 @@ class PlacesExtractor(AbstractGMapsExtractor):
             if self._place_name in places_objs.keys():
                 # el nombre del local comercial se encuentra en los resultados y se procede a clickar sobre él y extraer
                 # la información una vez se haya cargado la página del local comercial
-                self.logger.info("-{place}-: found in search list due to ambiguous name nearby".format(
+                self.logger.debug("-{place}-: found in search list due to ambiguous name nearby".format(
                     place=self._place_name))
                 found_place = places_objs.get(self._place_name)
                 driver.execute_script("arguments[0].click();", found_place)
@@ -544,8 +547,6 @@ class PlacesExtractor(AbstractGMapsExtractor):
 
         end_time = time.time()
         elapsed = int(end_time - init_time)
-        self.logger.info("-{name}-: scrapping process has took: -{elapsed}- seconds".format(name=self._place_name,
-                                                                                            elapsed=elapsed))
-        self.logger.info("-{name}-: scrapping process with url -{url}- is finishing".format(name=self._place_name,
-                                                                                            url=self._url))
+        self.logger.info("-{name}-: scrapping process the url -{url}- has took: -{elapsed}- seconds".format(
+            name=self._place_name, elapsed=elapsed, url=self._url))
         return result_to_return
