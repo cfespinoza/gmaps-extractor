@@ -3,7 +3,7 @@
   "executors": 10,
   "log_level": "INFO",
   "log_dir": "/home/cflores/cflores_workspace/gmaps-extractor/results",
-  "results_pages": 1,
+  "results_pages": 5,
   "num_reviews": 3,
   "input_config": {
     "type": "db",

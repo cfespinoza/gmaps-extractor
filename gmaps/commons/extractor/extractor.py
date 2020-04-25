@@ -1,6 +1,7 @@
 import logging
 import time
 
+import selenium
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.support.ui import WebDriverWait
@@ -102,6 +103,8 @@ class AbstractGMapsExtractor:
         self._output_config = output_config
         self._writer = None
         self._postal_code = None
+        self._driver_build_intent = 0
+        self._max_driver_build_intent = 5
 
     def _get_driver_config(self, driver_arguments=None, experimental_arguments=None):
         """Función privada que devuelve la configuración necesaria para instanciar un chromedriver. Si le llegan
@@ -155,12 +158,28 @@ class AbstractGMapsExtractor:
         options = driver_options if driver_options else self._get_driver_config()
 
         # initialize the driver
-        driver = webdriver.Chrome(
-            executable_path=driver_location,
-            chrome_options=options)
-        driver.wait = WebDriverWait(driver, self._driver_wait)
-        driver.implicitly_wait(self._driver_implicit_wait)
-        return driver
+        driver = None
+        try:
+            driver = webdriver.Chrome(
+                executable_path=driver_location,
+                chrome_options=options)
+            driver.wait = WebDriverWait(driver, self._driver_wait)
+            driver.implicitly_wait(self._driver_implicit_wait)
+        except selenium.common.exceptions.WebDriverException as driverException:
+            if self._driver_build_intent == self._max_driver_build_intent:
+                self.logger.error("maximum retries to build driver reached. Aborting to generate driver")
+                self.logger.error(str(driverException))
+            else:
+                self.logger.warning("{exception_name} detected, trying to rebuild driver after short sleep time".format(
+                    exception_name="selenium.common.exceptions.WebDriverException"))
+                self.force_sleep(self.sleep_xs)
+                self._driver_build_intent += 1
+                driver = self._build_driver(provided_driver_location=provided_driver_location,
+                                            driver_options=driver_options)
+        except Exception as e:
+            self.logger.error("not controlled error detected: {exception}".format(exception=str(e)))
+        finally:
+            return driver
 
     def force_sleep(self, sleep_time=0):
         """Hace dormir el thread para dar tiempo a chrome a renderizar todos los elementos necesarios.
@@ -258,7 +277,7 @@ class AbstractGMapsExtractor:
             la función `write` haya sido satisfactoria
         """
         if self._writer:
-            self._writer.write(data)
+            return self._writer.write(data)
         else:
             return data
 

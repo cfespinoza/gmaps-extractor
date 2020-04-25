@@ -77,7 +77,7 @@ class PlaceDbWriter(DbWriter):
                     )
                     VALUES (%s, %s, %s, %s, %s)
                 """
-        self._find_place_query = """SELECT id FROM commercial_premise WHERE name = %s and date = %s and address = %s"""
+        self._find_place_query = """SELECT id FROM commercial_premise WHERE name = %s and date = %s and address like %s"""
         self.auto_boot()
 
     def auto_boot(self):
@@ -123,7 +123,7 @@ class PlaceDbWriter(DbWriter):
         """
         name = data.get("name", "")
         date = data.get("date", "")
-        address = data.get("address", "")
+        address = "{prefix_address}%".format(prefix_address=data.get("address", ""))
         cursor = self.db.cursor()
         is_registered = False
         try:
@@ -134,8 +134,8 @@ class PlaceDbWriter(DbWriter):
             else:
                 is_registered = False
         except Exception as e:
-            self.logger.error("error checking if place is already registered: -{name}- for date -{date}-".format(
-                name=name, date=date))
+            self.logger.error("-{place}-: error checking if place is already registered for address"
+                              " -{address} and date -{date}-".format(place=name, date=date, address=address))
             self.logger.error(str(e))
         finally:
             cursor.close()
@@ -181,7 +181,7 @@ class PlaceDbWriter(DbWriter):
             if db_element:
                 # si el local comercial ya existe en la base de datos para la fecha de ejecución, se marca como
                 # insertado: `inserted = True`
-                self.logger.info("commercial premise with name -{name}- found in database".format(name=name))
+                self.logger.info("-{place}-: commercial premise found in database".format(place=name))
                 inserted = True
             else:
                 # si no está, se inserta primero en la tabla `commercial_premise` y se obtiene el id para el local
@@ -192,26 +192,26 @@ class PlaceDbWriter(DbWriter):
                     price_range, style, address, date, execution_places_types
                 )
                 try:
-                    self.logger.info("storing commercial premise in database")
+                    self.logger.info("-{place}-: storing commercial premise in database".format(place=name))
                     cursor.execute(self._commercial_premise_query, values)
                     element_id = cursor.fetchone()
                     self.db.commit()
                 except Exception as e:
                     self.db.rollback()
-                    self.logger.error("error storing commercial premise with -{name}-".format(name=name))
+                    self.logger.error("-{place}-: error storing commercial premise".format(place=name))
                     self.logger.error(str(e))
-                    self.logger.error("wrong value: {values}".format(values=values))
+                    self.logger.error("-{place}-: wrong value: {values}".format(place=name, values=values))
                     raise Exception("avoid registration: commercial premise with name -{name}- with wrong values"
                                     .format(name=name))
                 # Store comments
                 values = [(element_id, comment, date) for comment in element.get("comments", [])]
-                self.logger.info("storing commercial premise comments in database")
+                self.logger.info("-{place}-: storing commercial premise comments in database".format(place=name))
                 cursor.executemany(self._commercial_premise_comments_query, values)
                 self.db.commit()
                 # Store occupancy data
                 if element.get("occupancy"):
                     values = []
-                    self.logger.info("storing commercial premise occupancy in database")
+                    self.logger.info("-{place}-: storing commercial premise occupancy in database".format(place=name))
                     for week_day, content in self.decompose_occupancy_data(element["occupancy"]).items():
                         if content and content.items():
                             values += [(element_id, week_day, key, value, date) for key, value in content.items()]
@@ -220,16 +220,16 @@ class PlaceDbWriter(DbWriter):
                         self.db.commit()
                     except Exception as e:
                         self.db.rollback()
-                        self.logger.error("error during storing occupancy for place: -{name}-".format(name=name))
+                        self.logger.error("-{place}-: error during storing occupancy".format(place=name))
                         self.logger.error(str(e))
-                        self.logger.error("wrong values:")
+                        self.logger.error("-{place}-: wrong values:")
                         self.logger.error(values)
                 inserted = True
         except Exception as e:
             self.db.rollback()
-            self.logger.error("error during writing data for place: -{name}-".format(name=name))
+            self.logger.error("-{place}-: error during writing data for place".format(place=name))
             self.logger.error(str(e))
-            self.logger.error("wrong values:")
+            self.logger.error("-{place}-: wrong values:")
             self.logger.error(element)
         finally:
             cursor.close()

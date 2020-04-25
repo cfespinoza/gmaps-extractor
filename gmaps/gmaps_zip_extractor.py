@@ -13,6 +13,7 @@ from gmaps.commons.commons import get_zip_codes_obj_config, get_obj_from_file, i
     validate_required_keys
 from gmaps.executions.reader import ExecutionDbReader
 from gmaps.places.extractor import PlacesExtractor
+from gmaps.process.gmaps_process import GmapsProcessPool
 from gmaps.results.optimized_extractor import OptimizedResultsExtractor
 
 
@@ -129,21 +130,25 @@ def scrap_zip_code(arguments):
     output_config = arguments.get("output_config")
     extraction_date = arguments.get("extraction_date")
     places_types = arguments.get("places_types")
+    executors = arguments.get("executors")
     scraper = OptimizedResultsExtractor(driver_location=driver_location,
                                         postal_code=postal_code,
                                         places_types=places_types,
                                         num_pages=arguments.get("num_pages"),
                                         base_url=arguments.get("base_url"))
     results = scraper.scrap()
-    parsed_results = [{"url": url,
-                       "place_name": name,
+    parsed_results = [{"url": place_found.get("url"),
+                       "place_name": place_found.get("name"),
+                       "place_address": place_found.get("address"),
                        "postal_code": postal_code,
                        "driver_location": driver_location,
                        "num_reviews": num_reviews,
                        "output_config": output_config,
                        "places_types": places_types,
-                       "extraction_date": extraction_date} for name, url in results.items()]
-    return parsed_results
+                       "extraction_date": extraction_date} for place_found in results]
+    with Pool(processes=executors) as pool:
+        places_results = pool.map(func=scrap_place, iterable=iter(parsed_results))
+    return places_results
 
 
 def scrap_place(arguments):
@@ -163,6 +168,7 @@ def scrap_place(arguments):
     """
     driver_location = arguments.get("driver_location")
     url = arguments.get("url")
+    place_address = arguments.get("place_address")
     place_name = arguments.get("place_name")
     num_reviews = arguments.get("num_reviews")
     output_config = arguments.get("output_config")
@@ -172,6 +178,7 @@ def scrap_place(arguments):
     scraper = PlacesExtractor(driver_location=driver_location,
                               url=url,
                               place_name=place_name,
+                              place_address=place_address,
                               num_reviews=num_reviews,
                               output_config=output_config,
                               postal_code=postal_code,
@@ -217,22 +224,15 @@ def extract():
                                "base_url": zip_info.get("base_url"),
                                "num_reviews": execution_config.get("num_reviews"),
                                "output_config": execution_config.get("output_config"),
+                               "executors": execution_config.get("place_executors", 3),
                                "extraction_date": today_date.isoformat()
                                } for zip_info in zip_config]
-        with Pool(processes=execution_config.get("executors")) as pool:
+        with GmapsProcessPool(processes=execution_config.get("executors")) as pool:
             zip_results = pool.map(func=scrap_zip_code, iterable=iter(zip_arguments_list))
         # zip_results será el resultado de la ejecución de todos los procesos, por lo cual será de tipo list de list, y
         # es necesario aplanarlo
         places_argument_list = list(itertools.chain.from_iterable(zip_results))
         logger.info("there have been found -{total}- places".format(total=len(places_argument_list)))
-
-        with Pool(processes=execution_config.get("executors")) as pool:
-            places_results = pool.map(func=scrap_place, iterable=iter(places_argument_list))
-        all_registered = all(places_results)
-        if all_registered:
-            logger.info("it seems all places have been correctly processed")
-        else:
-            logger.warning("there are some places that could not be registered, check logs")
     else:
         logger.error("there are error in configuration files. Some required configurations are not present")
         logger.error("required keys: {keys}".format(keys=required_keys))
