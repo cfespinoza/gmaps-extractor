@@ -164,9 +164,9 @@ class PlacesExtractor(AbstractGMapsExtractor):
         self._total_votes_xpath = "//*[@id='pane']/div/div[@tabindex='-1']/div/div/div[@class='section-hero-header-title']//span[@class='section-rating-term-list']//button"
         self._address_xpath = "//*[@id='pane']/div/div[@tabindex='-1']/div/div/div[@data-section-id='ad']//span[@class='widget-pane-link']"
         self._see_all_reviews_button = "//*[@id='pane']/div/div[1]/div/div/div/div/div[@jsaction='pane.reviewlist.goToReviews']/button"
-        self._price_range = "//*[@id='pane']/div/div[1]/div/div/div[2]/div[1]/div[2]/div/div[1]/span[2]/span/span[2]/span[2]/span[1]/span[@role='text']"
+        self._price_range = "//*[@id='pane']/div/div[1]/div/div/div[2]/div[1]/div[2]/div/div[1]/span[2]/span/span[2]/span[2]/span[1]/span"
         self._premise_type = "//*[@id='pane']/div/div[1]//button[@jsaction='pane.rating.category']"
-        self._style = "//*[@id='pane']/div/div[1]/div/div/jsl/button/div//div[@class='section-editorial-attributes-summary']"
+        self._style = "//*[@id='pane']/div/div[1]/div/div//button/div//div[@class='section-editorial-attributes-summary']"
         self._review_css_class = "section-review-review-content"
         self._thread_local = threading.local()
         self._thread_driver_id = "{classname}_{place}_driver".format(classname=self.__class__.__name__,
