@@ -82,6 +82,29 @@ class OptimizedResultsExtractor(AbstractGMapsExtractor):
         self._next_button_xpath = "//div[@class='gm2-caption']/div/div/button[@jsaction='pane.paginationSection.nextPage']"
         self.auto_boot()
 
+    def extract_currenct_address(self, name, address_str):
+        self.logger.debug("-{postal_code}-: place -{name}- have been detected with address: {address}".format(
+            postal_code=self._postal_code, name=name, address=address_str
+        ))
+        info_separator = "·"
+        address = address_str
+        if address_str:
+            if info_separator in address_str:
+                compressed_address = [item.strip() for item in address_str.split(info_separator)]
+                if len(compressed_address) == 3:
+                    price_range = compressed_address[0]
+                    style = compressed_address[1]
+                    address = compressed_address[2]
+                else:
+                    price_range = None
+                    style = compressed_address[0]
+                    address = compressed_address[1]
+
+        self.logger.debug("-{postal_code}-: place -{name}- have formatted address: {address}".format(
+            postal_code=self._postal_code, name=name, address=address
+        ))
+        return address
+
     def get_basic_info(self, single_rest_result):
         r_description_arr = single_rest_result.text.split("\n")
         name = r_description_arr[0]
@@ -89,7 +112,7 @@ class OptimizedResultsExtractor(AbstractGMapsExtractor):
         address = r_description_arr[2] if len(r_description_arr) > 2 else None
         return {
             "name": name,
-            "address": address,
+            "address": self.extract_currenct_address(name, address),
             "url": self._url_place_template.format(postal_code_info=self._postal_code_info, coords=self._coords,
                                                    places_types=self._places_types, place_name=name.replace(" ", "+"))
         }

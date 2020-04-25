@@ -77,7 +77,7 @@ class PlaceDbWriter(DbWriter):
                     )
                     VALUES (%s, %s, %s, %s, %s)
                 """
-        self._find_place_query = """SELECT id FROM commercial_premise WHERE name = %s and date = %s and address = %s"""
+        self._find_place_query = """SELECT id FROM commercial_premise WHERE name = %s and date = %s and address like %s"""
         self.auto_boot()
 
     def auto_boot(self):
@@ -123,7 +123,7 @@ class PlaceDbWriter(DbWriter):
         """
         name = data.get("name", "")
         date = data.get("date", "")
-        address = data.get("address", "")
+        address = "{prefix_address}%".format(prefix_address=data.get("address", ""))
         cursor = self.db.cursor()
         is_registered = False
         try:

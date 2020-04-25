@@ -2,12 +2,14 @@ import logging
 import threading
 import time
 
+import selenium
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException
 
 from gmaps.commons.commons import validate_required_keys
 from gmaps.commons.extractor.extractor import AbstractGMapsExtractor
 from selenium.webdriver.support import expected_conditions as ec
 
+from gmaps.commons.writer.writer import PrinterWriter
 from gmaps.places.writer import PlaceDbWriter, PlaceFileWriter
 
 
@@ -177,7 +179,7 @@ class PlacesExtractor(AbstractGMapsExtractor):
         self._places_types = "+".join(places_types)
         self.auto_boot()
 
-    def boot_writer(self):
+    def _boot_writer(self):
         """Arranca y configura el writer que corresponda dependiendo del soporte de salida que se haya configurado para
         la ejecución del programa.
         """
@@ -217,12 +219,14 @@ class PlacesExtractor(AbstractGMapsExtractor):
         else:
             self.logger.error("writer type is not supported")
 
-    def _boot_writer(self):
+    def boot_writer(self):
         """Función que arrancaba y configuraba el writer de este extractor leyendo de la configuración del soporte de
-        salida configurada para la ejecución. Actualmente en desuso.
+        salida configurada para la ejecución.
         """
         if self._output_config:
-            self._writer = PlaceDbWriter(self._output_config)
+            self._boot_writer()
+        else:
+            self._writer = PrinterWriter()
 
     def set_driver(self, driver):
         """Función que registra el driver asociado a este extractor en el thread de ejecución. Actualmente en desuso."""
@@ -500,7 +504,7 @@ class PlacesExtractor(AbstractGMapsExtractor):
             if is_registered:
                 self.logger.warning("-{name}-: place in {address} and for date: -{date}- is already processed".format(
                     name=self._place_name, date=self._extraction_date, address=self._place_address))
-                result_to_return = True
+                result_to_return = {"is_registered": True}
             else:
                 # empieza el proceso de extracción
                 driver.get(self._url)

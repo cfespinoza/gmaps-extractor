@@ -1,3 +1,6 @@
+import json
+
+
 class AbstractWriter:
     """Esta clase abstracta contiene la definición e interfaz de funciones para todos los tipos de `writer` que
     se usan en el programa para volcar la información al soporte de salida que se haya configurado al programa.
@@ -92,3 +95,19 @@ class FileWriter(AbstractWriter):
 
     def is_registered(self, data):
         raise NotImplementedError("Method must be implemented in subclass")
+
+
+class PrinterWriter(AbstractWriter):
+
+    def finish(self):
+        pass
+
+    def auto_boot(self):
+        pass
+
+    def is_registered(self, data):
+        return False
+
+    def write(self, element):
+        print(json.dumps(element))
+        return element

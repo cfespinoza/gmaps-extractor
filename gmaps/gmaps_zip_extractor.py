@@ -130,7 +130,7 @@ def scrap_zip_code(arguments):
     output_config = arguments.get("output_config")
     extraction_date = arguments.get("extraction_date")
     places_types = arguments.get("places_types")
-    executors = arguments.get("executors")
+    executors = arguments.get("places_executors")
     scraper = OptimizedResultsExtractor(driver_location=driver_location,
                                         postal_code=postal_code,
                                         places_types=places_types,
@@ -224,7 +224,7 @@ def extract():
                                "base_url": zip_info.get("base_url"),
                                "num_reviews": execution_config.get("num_reviews"),
                                "output_config": execution_config.get("output_config"),
-                               "executors": execution_config.get("executors"),
+                               "executors": execution_config.get("place_executors", 3),
                                "extraction_date": today_date.isoformat()
                                } for zip_info in zip_config]
         with GmapsProcessPool(processes=execution_config.get("executors")) as pool:
