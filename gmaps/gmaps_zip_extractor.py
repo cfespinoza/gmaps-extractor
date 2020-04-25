@@ -233,14 +233,6 @@ def extract():
         # es necesario aplanarlo
         places_argument_list = list(itertools.chain.from_iterable(zip_results))
         logger.info("there have been found -{total}- places".format(total=len(places_argument_list)))
-
-        # with Pool(processes=execution_config.get("executors")) as pool:
-        #     places_results = pool.map(func=scrap_place, iterable=iter(places_argument_list))
-        # all_registered = all(places_results)
-        # if all_registered:
-        #     logger.info("it seems all places have been correctly processed")
-        # else:
-        #     logger.warning("there are some places that could not be registered, check logs")
     else:
         logger.error("there are error in configuration files. Some required configurations are not present")
         logger.error("required keys: {keys}".format(keys=required_keys))
