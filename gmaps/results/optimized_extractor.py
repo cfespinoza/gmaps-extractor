@@ -82,7 +82,22 @@ class OptimizedResultsExtractor(AbstractGMapsExtractor):
         self._next_button_xpath = "//div[@class='gm2-caption']/div/div/button[@jsaction='pane.paginationSection.nextPage']"
         self.auto_boot()
 
-    def extract_currenct_address(self, name, address_str):
+    def extract_current_address(self, name, address_str):
+        """Función encargada de extraer la dirección de la descripción del elemento web de la sección de resultados
+
+        Arguments
+        ---------
+        name : str
+            nombre del lugar a extraer
+        address_str : str
+            descripción del resultado de la búsqueda
+
+        Returns
+        -------
+        str :
+            dirección o dirección parcial del local comercial encontrado en el elemento web de la sección de resultados
+
+        """
         self.logger.debug("-{postal_code}-: place -{name}- have been detected with address: {address}".format(
             postal_code=self._postal_code, name=name, address=address_str
         ))
@@ -106,13 +121,27 @@ class OptimizedResultsExtractor(AbstractGMapsExtractor):
         return address
 
     def get_basic_info(self, single_rest_result):
+        """Función encargada de extraer la información, como nombre, url y dirección básica de un resultado de local
+        comercial
+
+        Parameters
+        ----------
+        single_rest_result : WebElement
+            elemento web del que se extrae la información básica
+
+        Returns
+        -------
+        dict
+            diccionario que contiene la información básica del resultado
+
+        """
         r_description_arr = single_rest_result.text.split("\n")
         name = r_description_arr[0]
         self.logger.debug("-{postal_code}-: restaurant found -{name}-".format(postal_code=self._postal_code, name=name))
         address = r_description_arr[2] if len(r_description_arr) > 2 else None
         return {
             "name": name,
-            "address": self.extract_currenct_address(name, address),
+            "address": self.extract_current_address(name, address),
             "url": self._url_place_template.format(postal_code_info=self._postal_code_info, coords=self._coords,
                                                    places_types=self._places_types, place_name=name.replace(" ", "+"))
         }
@@ -128,7 +157,6 @@ class OptimizedResultsExtractor(AbstractGMapsExtractor):
             nombre de local comercial
         """
         driver = self.get_driver()
-        # places_found = {}
         places_found = []
         total_time = 0
         try:
@@ -146,22 +174,9 @@ class OptimizedResultsExtractor(AbstractGMapsExtractor):
                 # Se extraen los nombres de los locales encontrados en los resultados y se generan dinámicamente las
                 # urls de acceso directo para cada uno de estos locales.
                 page_elements = driver.find_elements_by_xpath(self._places_element_xpath_query)
-                # formatted_places_names = [place.text.split("\n")[0].replace(" ", "+") for place in page_elements]
-                # places_names = [place.text.split("\n")[0] for place in page_elements]
-                # self.logger.debug("-{postal_code}-: places found: {results}".format(
-                #     postal_code=self._postal_code, results=formatted_places_names))
-                # places_urls = [self._url_place_template.format(postal_code_info=self._postal_code_info,
-                #                                                places_types=self._places_types,
-                #                                                place_name=place_name,
-                #                                                coords=self._coords) for place_name in
-                #                formatted_places_names]
+                # se actualiza el listado de resultados con el par nombre-url. Se usa un diccionario para evitar
+                # posibles duplicados
                 places_found += [self.get_basic_info(result) for result in page_elements]
-                # se actualiza el diccionario con el par nombre-url. Se usa un diccionario para evitar posibles
-                # duplicados
-                # for name, url in zip(places_names, places_urls):
-                #     pair = {name: url}
-                #     places_found.update(pair)
-                #     self.logger.debug(pair)
 
                 # si existe botón de de siguiente página, se intenta seguir, en caso contrario, se sale del bucle
                 next_button = self.get_info_obj(self._next_button_xpath)

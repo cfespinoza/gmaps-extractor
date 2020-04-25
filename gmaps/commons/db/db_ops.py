@@ -210,6 +210,131 @@ def get_parser():
     return parser
 
 
+def drop_executions_schema(host=None, user=None, passwd=None, db_name=None):
+    """Función encargada de borrar las tablas de ejecuciones de la base de datos. Puede ser llamada en caso de
+    recibir en la configuración: `operation: reset-executions`
+
+        Parameters
+        ----------
+        host: str
+            fqdn de la base de datos a la que se conectará el programa
+        user: str
+            usuario con el que el programa se conectará a la base de datos
+        passwd: str
+            contraseña con la que se el usuario se autenticará en la base de datos
+        db_name: str
+            nombre de la base de datos a la que conectarse
+
+        """
+    db = psycopg2.connect(
+        host=host,
+        user=user,
+        password=passwd,
+        database=db_name
+    )
+    cursor = db.cursor()
+    drop_sql = ["DROP TABLE commercial_premise_occupation",
+                "DROP TABLE commercial_premise_comments",
+                "DROP TABLE commercial_premise"
+                ]
+    for sql in drop_sql:
+        try:
+            cursor.execute(sql)
+        except psycopg2.errors.ProgrammingError:
+            pass
+        except Exception:
+            pass
+    db.commit()
+    cursor.close()
+    db.close()
+    pass
+
+
+def create_executions_schema(host=None, user=None, passwd=None, db_name=None):
+    """Función encargada de crear las tablas en la base de datos. Puede ser llamada en caso de recibir en la
+        configuración: `operation: init` o `operation: reset`
+
+        Parameters
+        ----------
+        host: str
+            fqdn de la base de datos a la que se conectará el programa
+        user: str
+            usuario con el que el programa se conectará a la base de datos
+        passwd: str
+            contraseña con la que se el usuario se autenticará en la base de datos
+        db_name: str
+            nombre de la base de datos a la que conectarse
+
+        """
+    db = psycopg2.connect(
+        host=host,
+        user=user,
+        password=passwd,
+        database=db_name
+    )
+    cursor = db.cursor()
+    sql_main_table = """
+            CREATE TABLE IF NOT EXISTS commercial_premise (
+                id SERIAL,
+                name VARCHAR(600) NOT NULL,
+                zip_code VARCHAR(5) NOT NULL,
+                coordinates VARCHAR(600),
+                telephone_number VARCHAR(25),
+                opening_hours VARCHAR(600),
+                type VARCHAR(600),
+                score FLOAT DEFAULT 0.0,
+                total_scores INTEGER DEFAULT 0,
+                price_range VARCHAR(5),
+                style VARCHAR(600),
+                address VARCHAR(600),
+                date DATE NOT NULL,
+                execution_places_types VARCHAR(600), 
+                PRIMARY KEY(ID)
+            )
+        """
+
+    sql_comments = """
+            CREATE TABLE IF NOT EXISTS commercial_premise_comments (
+                id SERIAL,
+                commercial_premise_id INTEGER NOT NULL,
+                content TEXT,
+                PRIMARY KEY(id),
+                date DATE NOT NULL,
+                FOREIGN KEY (commercial_premise_id)
+                    REFERENCES commercial_premise(id)
+                    ON DELETE CASCADE
+                    ON UPDATE CASCADE
+            )
+        """
+
+    sql_ocupation = """
+            CREATE TABLE IF NOT EXISTS commercial_premise_occupation (
+                id SERIAL,
+                commercial_premise_id INTEGER NOT NULL,
+                week_day VARCHAR (50),
+                time_period VARCHAR (50),
+                occupation FLOAT DEFAULT 0.0,
+                date DATE NOT NULL,
+                PRIMARY KEY(id),
+                FOREIGN KEY (commercial_premise_id)
+                    REFERENCES commercial_premise(id)
+                    ON DELETE CASCADE
+                    ON UPDATE CASCADE
+            )
+        """
+
+    sql_index_creation = """
+            CREATE UNIQUE INDEX commercial_premise_index ON commercial_premise (name, address, date)
+        """
+
+    tables = [sql_main_table, sql_comments, sql_ocupation, sql_index_creation]
+    for t in tables:
+        cursor.execute(t)
+    db.commit()
+    cursor.close()
+    db.close()
+
+
 def db_ops():
     """Función principal que se encarga de revisar que los argumentos pasados por la configuración es la correcta
     para realizar una ejecución.
@@ -220,7 +345,7 @@ def db_ops():
     parser = get_parser()
     args = parser.parse_args()
     config = None
-    supported_ops = ["reset", "init", "drop"]
+    supported_ops = ["reset-all", "init", "drop", "reset-executions"]
     required_keys = ["db_name", "host", "user", "passwd", "operation"]
     with open(args.config_file, 'r') as f:
         config = json.load(f)
@@ -235,12 +360,15 @@ def db_ops():
                 "passwd": config.get("passwd"),
                 "db_name": config.get("db_name")
             }
-            if op == "reset":
+            if op == "reset-all":
                 drop_schema(**op_config)
                 create_schema(**op_config)
             elif op == "init":
                 create_database(**op_config)
                 create_schema(**op_config)
+            elif op == "reset-executions":
+                drop_executions_schema(**op_config)
+                create_executions_schema(**op_config)
             else:
                 drop_schema(**op_config)
         else:
