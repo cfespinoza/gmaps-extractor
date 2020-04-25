@@ -5,6 +5,7 @@ from datetime import datetime
 from gmaps.places.extractor import PlacesExtractor
 from gmaps.places.writer import PlaceDbWriter
 from gmaps.results.optimized_extractor import OptimizedResultsExtractor
+from selenium.webdriver.support import expected_conditions as ec
 
 
 class TestGmapsScrapper(unittest.TestCase):
@@ -17,6 +18,11 @@ class TestGmapsScrapper(unittest.TestCase):
         "database": "gmaps",
         "db_user": "postgres",
         "db_pass": "1234"
+    }
+    _place = {
+        "name": "Restaurante Costa Verde",
+        "address": "Calle Vía Carpetana, 322",
+        "url": "https://www.google.com/maps/search/28047+Madrid+Restaurante+Bar+Restaurante+Costa+Verde/@40.3911256,-3.763457,14z"
     }
 
     def test_scrap_zip_code(self):
@@ -67,6 +73,25 @@ class TestGmapsScrapper(unittest.TestCase):
         writer = PlaceDbWriter(self._output_config)
         is_registered = writer.is_registered(place)
         assert is_registered is True
+
+    def test_extract_place_info_openning_hours(self):
+        extraction_date = datetime.now().isoformat()
+        scraper = PlacesExtractor(driver_location=self._driver_location,
+                                  url=self._place.get("url"),
+                                  place_name=self._place.get("name"),
+                                  place_address=self._place.get("address"),
+                                  num_reviews=3,
+                                  output_config=self._output_config,
+                                  postal_code=self._postal_code,
+                                  places_types=self._places_types,
+                                  extraction_date=extraction_date)
+        scraper._driver.get(self._place.get("url"))
+        scraper._driver.wait.until(ec.url_changes(self._place.get("url")))
+        results = scraper._get_place_info()
+        scraper.finish()
+        print(json.dumps(results))
+        assert len(results.keys()) > 0
+        assert len(results.get("opening_hours")) == 7
 
 
 if __name__ == '__main__':
