@@ -201,8 +201,8 @@ class PlaceDbWriter(DbWriter):
                     self.logger.error("-{place}-: error storing commercial premise".format(place=name))
                     self.logger.error(str(e))
                     self.logger.error("-{place}-: wrong value: {values}".format(place=name, values=values))
-                    raise Exception("avoid registration: commercial premise with name -{name}- with wrong values"
-                                    .format(name=name))
+                    raise Exception("-{place}-: avoid registration: commercial premise with wrong values"
+                                    .format(place=name))
                 # Store comments
                 values = [(element_id, comment, date) for comment in element.get("comments", [])]
                 self.logger.info("-{place}-: storing commercial premise comments in database".format(place=name))
@@ -229,8 +229,8 @@ class PlaceDbWriter(DbWriter):
             self.db.rollback()
             self.logger.error("-{place}-: error during writing data for place".format(place=name))
             self.logger.error(str(e))
-            self.logger.error("-{place}-: wrong values:")
-            self.logger.error(element)
+            self.logger.error("-{place}-: wrong values:".format(place=name))
+            self.logger.error(json.dumps(element))
         finally:
             cursor.close()
             return inserted
