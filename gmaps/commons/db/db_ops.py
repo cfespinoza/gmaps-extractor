@@ -8,6 +8,81 @@ import argparse
 import json
 import psycopg2
 
+sql_main_table = """
+        CREATE TABLE IF NOT EXISTS commercial_premise (
+            id SERIAL,
+            name VARCHAR(600) NOT NULL,
+            zip_code VARCHAR(5) NOT NULL,
+            coordinates VARCHAR(600),
+            telephone_number VARCHAR(30),
+            opening_hours VARCHAR(600),
+            type VARCHAR(600),
+            score FLOAT DEFAULT 0.0,
+            total_scores INTEGER DEFAULT 0,
+            price_range VARCHAR(600),
+            style VARCHAR(600),
+            address VARCHAR(600),
+            date DATE NOT NULL,
+            execution_places_types VARCHAR(600), 
+            PRIMARY KEY(ID)
+        )
+    """
+
+sql_comments = """
+    CREATE TABLE IF NOT EXISTS commercial_premise_comments (
+        id SERIAL,
+        commercial_premise_id INTEGER NOT NULL,
+        content TEXT,
+        PRIMARY KEY(id),
+        date DATE NOT NULL,
+        FOREIGN KEY (commercial_premise_id)
+            REFERENCES commercial_premise(id)
+            ON DELETE CASCADE
+            ON UPDATE CASCADE
+    )
+"""
+
+sql_ocupation = """
+    CREATE TABLE IF NOT EXISTS commercial_premise_occupation (
+        id SERIAL,
+        commercial_premise_id INTEGER NOT NULL,
+        week_day VARCHAR (50),
+        time_period VARCHAR (50),
+        occupation FLOAT DEFAULT 0.0,
+        date DATE NOT NULL,
+        PRIMARY KEY(id),
+        FOREIGN KEY (commercial_premise_id)
+            REFERENCES commercial_premise(id)
+            ON DELETE CASCADE
+            ON UPDATE CASCADE
+    )
+"""
+
+sql_zip_codes_info = """
+    CREATE TABLE IF NOT EXISTS zip_code_info (
+        id SERIAL,
+        zip_code VARCHAR(5) NOT NULL,
+        gmaps_url VARCHAR(600) NOT NULL,
+        gmaps_coordinates VARCHAR(100) NOT NULL,
+        country VARCHAR(100) NOT NULL,
+        PRIMARY KEY(id)
+    )
+"""
+
+sql_execution_table = """
+    CREATE TABLE IF NOT EXISTS execution_info (
+        id SERIAL,
+        zip_code VARCHAR(5) NOT NULL,
+        place_type VARCHAR(600) NOT NULL,
+        country VARCHAR(100) NOT NULL,
+        PRIMARY KEY(id)
+    )
+"""
+
+sql_index_creation = """
+    CREATE UNIQUE INDEX commercial_premise_index ON commercial_premise (name, address, date)
+"""
+
 
 def create_database(host=None, user=None, passwd=None, db_name=None):
     """Función encargada de crear la base de datos. Puede ser llamada en caso de recibir en la configuración:
@@ -61,80 +136,6 @@ def create_schema(host=None, user=None, passwd=None, db_name=None):
         database=db_name
     )
     cursor = db.cursor()
-    sql_main_table = """
-        CREATE TABLE IF NOT EXISTS commercial_premise (
-            id SERIAL,
-            name VARCHAR(600) NOT NULL,
-            zip_code VARCHAR(5) NOT NULL,
-            coordinates VARCHAR(600),
-            telephone_number VARCHAR(25),
-            opening_hours VARCHAR(600),
-            type VARCHAR(600),
-            score FLOAT DEFAULT 0.0,
-            total_scores INTEGER DEFAULT 0,
-            price_range VARCHAR(5),
-            style VARCHAR(600),
-            address VARCHAR(600),
-            date DATE NOT NULL,
-            execution_places_types VARCHAR(600), 
-            PRIMARY KEY(ID)
-        )
-    """
-
-    sql_comments = """
-        CREATE TABLE IF NOT EXISTS commercial_premise_comments (
-            id SERIAL,
-            commercial_premise_id INTEGER NOT NULL,
-            content TEXT,
-            PRIMARY KEY(id),
-            date DATE NOT NULL,
-            FOREIGN KEY (commercial_premise_id)
-                REFERENCES commercial_premise(id)
-                ON DELETE CASCADE
-                ON UPDATE CASCADE
-        )
-    """
-
-    sql_ocupation = """
-        CREATE TABLE IF NOT EXISTS commercial_premise_occupation (
-            id SERIAL,
-            commercial_premise_id INTEGER NOT NULL,
-            week_day VARCHAR (50),
-            time_period VARCHAR (50),
-            occupation FLOAT DEFAULT 0.0,
-            date DATE NOT NULL,
-            PRIMARY KEY(id),
-            FOREIGN KEY (commercial_premise_id)
-                REFERENCES commercial_premise(id)
-                ON DELETE CASCADE
-                ON UPDATE CASCADE
-        )
-    """
-
-    sql_zip_codes_info = """
-        CREATE TABLE IF NOT EXISTS zip_code_info (
-            id SERIAL,
-            zip_code VARCHAR(5) NOT NULL,
-            gmaps_url VARCHAR(600) NOT NULL,
-            gmaps_coordinates VARCHAR(100) NOT NULL,
-            country VARCHAR(100) NOT NULL,
-            PRIMARY KEY(id)
-        )
-    """
-
-    sql_execution_table = """
-        CREATE TABLE IF NOT EXISTS execution_info (
-            id SERIAL,
-            zip_code VARCHAR(5) NOT NULL,
-            place_type VARCHAR(600) NOT NULL,
-            country VARCHAR(100) NOT NULL,
-            PRIMARY KEY(id)
-        )
-    """
-
-    sql_index_creation = """
-        CREATE UNIQUE INDEX commercial_premise_index ON commercial_premise (name, address, date)
-    """
 
     tables = [sql_main_table, sql_comments, sql_ocupation, sql_zip_codes_info, sql_execution_table, sql_index_creation]
     for t in tables:
@@ -273,59 +274,6 @@ def create_executions_schema(host=None, user=None, passwd=None, db_name=None):
         database=db_name
     )
     cursor = db.cursor()
-    sql_main_table = """
-            CREATE TABLE IF NOT EXISTS commercial_premise (
-                id SERIAL,
-                name VARCHAR(600) NOT NULL,
-                zip_code VARCHAR(5) NOT NULL,
-                coordinates VARCHAR(600),
-                telephone_number VARCHAR(25),
-                opening_hours VARCHAR(600),
-                type VARCHAR(600),
-                score FLOAT DEFAULT 0.0,
-                total_scores INTEGER DEFAULT 0,
-                price_range VARCHAR(5),
-                style VARCHAR(600),
-                address VARCHAR(600),
-                date DATE NOT NULL,
-                execution_places_types VARCHAR(600), 
-                PRIMARY KEY(ID)
-            )
-        """
-
-    sql_comments = """
-            CREATE TABLE IF NOT EXISTS commercial_premise_comments (
-                id SERIAL,
-                commercial_premise_id INTEGER NOT NULL,
-                content TEXT,
-                PRIMARY KEY(id),
-                date DATE NOT NULL,
-                FOREIGN KEY (commercial_premise_id)
-                    REFERENCES commercial_premise(id)
-                    ON DELETE CASCADE
-                    ON UPDATE CASCADE
-            )
-        """
-
-    sql_ocupation = """
-            CREATE TABLE IF NOT EXISTS commercial_premise_occupation (
-                id SERIAL,
-                commercial_premise_id INTEGER NOT NULL,
-                week_day VARCHAR (50),
-                time_period VARCHAR (50),
-                occupation FLOAT DEFAULT 0.0,
-                date DATE NOT NULL,
-                PRIMARY KEY(id),
-                FOREIGN KEY (commercial_premise_id)
-                    REFERENCES commercial_premise(id)
-                    ON DELETE CASCADE
-                    ON UPDATE CASCADE
-            )
-        """
-
-    sql_index_creation = """
-            CREATE UNIQUE INDEX commercial_premise_index ON commercial_premise (name, address, date)
-        """
 
     tables = [sql_main_table, sql_comments, sql_ocupation, sql_index_creation]
     for t in tables:
