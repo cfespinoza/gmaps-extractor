@@ -156,7 +156,7 @@ class PlacesExtractor(AbstractGMapsExtractor):
         }
         self._coords_xpath_selector = "//*[@id='pane']/div/div[1]/div/div/div[@data-section-id='ol']/div/div[@class='section-info-line']/span[@class='section-info-text']/span[@class='widget-pane-link']"
         self._telephone_xpath_selector = "//*[@id='pane']/div/div[1]/div/div/div[@data-section-id='pn0']/div/div[@class='section-info-line']/span/span[@class='widget-pane-link']"
-        self._openning_hours_xpath_selector = "//*[@id='pane']/div/div[1]/div/div/div[15]/div[3]"
+        self._openning_hours_xpath_selector = "//*[@id='pane']/div/div[1]/div/div/div[@class='cX2WmPgCkHi__root gm2-body-2 cX2WmPgCkHi__dense']/div[3]"
         self._back_button_xpath = "//*[@id='pane']/div/div/div[@class='widget-pane-content-holder']/div/button"
         self._all_reviews_back_button_xpath = "//*[@id='pane']/div/div[@tabindex='-1']//button[@jsaction='pane.topappbar.back;focus:pane.focusTooltip;blur:pane.blurTooltip']"
         self._occupancy_by_hours_xpath = "div[contains(@class, 'section-popular-times-graph')]/div[contains(@class, 'section-popular-times-bar')]"
@@ -169,7 +169,10 @@ class PlacesExtractor(AbstractGMapsExtractor):
         self._price_range = "//*[@id='pane']/div/div[1]/div/div/div[2]/div[1]/div[2]/div/div[1]/span[2]/span/span[2]/span[2]/span[1]/span"
         self._premise_type = "//*[@id='pane']/div/div[1]//button[@jsaction='pane.rating.category']"
         self._style = "//*[@id='pane']/div/div[1]/div/div//button/div//div[@class='section-editorial-attributes-summary']"
-        self._review_css_class = "section-review-review-content"
+        # self._review_css_class = "section-review-review-content"
+        self._review_css_class = "section-review-content"
+        self._review_publish_date = "//span[@class='section-review-publish-date']"
+        self._review_content_xpath = "//span[@class='section-review-text']"
         self._thread_local = threading.local()
         self._thread_driver_id = "{classname}_{place}_driver".format(classname=self.__class__.__name__,
                                                                      place=self._place_name)
@@ -346,10 +349,26 @@ class PlacesExtractor(AbstractGMapsExtractor):
             "price_range": price_range,
             "style": style,
             "premise_type": premise_type,
-            "extractor_url": self._url
+            "extractor_url": self._url,
+            "current_url": driver.current_url
         }
         self.logger.info("-{place}-: info retrieved for place".format(place=self._place_name))
         return place_info
+
+    def _get_formatted_comments(self, elemText):
+        self.logger.debug("-{place}-: formatting comment element".format(place=self._place_name))
+        elemArr = elemText.split("\n")
+        comment_formatted = {"raw_content": elemText}
+        try:
+            comment_formatted["author"] = elemArr[0]
+            comment_formatted["reviews_by_author"] = elemArr[1]
+            comment_formatted["publish_date"] = elemArr[2]
+            comment_formatted["content"] = "\n".join(elemArr[3:-1])
+        except Exception as e:
+            self.logger.error("-{place}-: error formatting comment element. exception: {exception}".format(
+                place=self._place_name, exception=str(e)))
+        finally:
+            return comment_formatted
 
     def _get_comments(self, place_name=None, sleep_time=None, external_driver=None):
         """Función que extrae los comentarios para el local comercial.
@@ -396,7 +415,7 @@ class PlacesExtractor(AbstractGMapsExtractor):
 
         # extract content of each element
         reviews_elements_list = driver.find_elements_by_class_name(self._review_css_class)
-        comments = [elem.text for elem in reviews_elements_list]
+        comments = [self._get_formatted_comments(elem.text) for elem in reviews_elements_list]
         self.logger.info("-{place}-: found -{total_reviews}- comments.".format(total_reviews=len(comments),
                                                                                place=place_name))
         return comments

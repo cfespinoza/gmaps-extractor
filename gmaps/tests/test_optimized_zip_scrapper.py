@@ -58,6 +58,27 @@ class TestGmapsScrapper(unittest.TestCase):
         print(results)
         assert len(results.keys()) > 0
 
+    def test_scrap_single_place_no_db(self):
+        place = {
+            "name": "Restaurante Costa Verde",
+            "address": "Calle Vía Carpetana, 322",
+            "url": "https://www.google.com/maps/search/28047+Madrid+Restaurante+Bar+Restaurante+Costa+Verde/@40.3911256,-3.763457,14z"
+        }
+
+        extraction_date = datetime.now().isoformat()
+        scraper = PlacesExtractor(driver_location=self._driver_location,
+                                  url=place.get("url"),
+                                  place_name=place.get("name"),
+                                  place_address=place.get("address"),
+                                  num_reviews=3,
+                                  output_config=None,
+                                  postal_code=self._postal_code,
+                                  places_types=self._places_types,
+                                  extraction_date=extraction_date)
+        results = scraper.scrap()
+        print(json.dumps(results))
+        assert len(results.keys()) > 0
+
     def test_db_writer_is_regitered(self):
         # place = {
         #     "name": "La Andaluza Vía Carpetana - Madrid",
