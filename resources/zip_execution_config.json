@@ -1,9 +1,10 @@
 {
   "driver_path": "/home/cflores/cflores_workspace/gmaps-extractor/resources/chromedriver",
   "executors": 10,
+  "place_executors": 5,
   "log_level": "INFO",
   "log_dir": "/home/cflores/cflores_workspace/gmaps-extractor/results",
-  "results_pages": 5,
+  "results_pages": 3,
   "num_reviews": 3,
   "input_config": {
     "type": "db",

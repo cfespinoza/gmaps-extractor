@@ -31,9 +31,12 @@ class ExecutionDbReader(DbReader):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.db = None
         self._read_execution_info = """
-            SELECT a.zip_code as zip_code, a.gmaps_url as gmaps_url, b.place_type as place_type, a.country as country
-            FROM zip_code_info as a
-            JOIN execution_info as b on a.zip_code = b.zip_code and LOWER(a.country) = LOWER(b.country)
+            select zip_info.zip_code as zip_code, zip_info.gmaps_url as gmaps_url,
+		        zip_info.country as country, string_agg(categoria, ',') as place_type
+            from zip_code_info as zip_info
+            join execution_info as exec_info on zip_info.id = exec_info.id_zip_code
+            join premise_type_info as type_info on exec_info.id_commercial_premise_type = type_info.codigo
+            group by zip_code, gmaps_url, country;
         """
 
     def finish(self):
@@ -72,7 +75,7 @@ class ExecutionDbReader(DbReader):
         try:
             cursor.execute(self._read_execution_info)
             results = cursor.fetchall()
-            for zip_code, url, types, country in results:
+            for zip_code, url, country, types in results:
                 executions.append({"postal_code": str(zip_code),
                                    "base_url": url,
                                    "types": str(types).split(","),

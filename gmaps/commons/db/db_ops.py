@@ -46,8 +46,8 @@ sql_ocupation = """
     CREATE TABLE IF NOT EXISTS commercial_premise_occupation (
         id SERIAL,
         commercial_premise_id INTEGER NOT NULL,
-        week_day VARCHAR (50),
-        time_period VARCHAR (50),
+        week_day VARCHAR (100),
+        time_period VARCHAR (100),
         occupation FLOAT DEFAULT 0.0,
         date DATE NOT NULL,
         PRIMARY KEY(id),
@@ -71,16 +71,28 @@ sql_zip_codes_info = """
 
 sql_execution_table = """
     CREATE TABLE IF NOT EXISTS execution_info (
-        id SERIAL,
-        zip_code VARCHAR(5) NOT NULL,
-        place_type VARCHAR(600) NOT NULL,
-        country VARCHAR(100) NOT NULL,
-        PRIMARY KEY(id)
+        id_zip_code INTEGER NOT NULL,
+        id_commercial_premise_type INTEGER NOT NULL,
+        FOREIGN KEY (id_zip_code)
+            REFERENCES zip_code_info(id)
+            ON DELETE CASCADE
+            ON UPDATE CASCADE,
+        FOREIGN KEY (id_commercial_premise_type)
+            REFERENCES premise_type_info(id)
+            ON DELETE CASCADE
+            ON UPDATE CASCADE
     )
 """
 
 sql_index_creation = """
     CREATE UNIQUE INDEX commercial_premise_index ON commercial_premise (name, address, date)
+"""
+
+sql_types_table_creation = """
+    CREATE TABLE IF NOT EXISTS premise_type_info (
+        codigo INTEGER NOT NULL,
+        categoria VARCHAR(600) NOT NULL
+    )
 """
 
 
@@ -100,7 +112,7 @@ def create_database(host=None, user=None, passwd=None, db_name=None):
         nombre de la base de datos a la que conectarse
 
     """
-    sql_create_database = "CREATE DATABASE {db_name} WITH ENCODING 'UTF8'" 
+    sql_create_database = "CREATE DATABASE {db_name} WITH ENCODING 'UTF8'"
     db = psycopg2.connect(
         host=host,
         user=user,
@@ -211,7 +223,7 @@ def get_parser():
     return parser
 
 
-def drop_executions_schema(host=None, user=None, passwd=None, db_name=None):
+def drop_results_schema(host=None, user=None, passwd=None, db_name=None):
     """Función encargada de borrar las tablas de ejecuciones de la base de datos. Puede ser llamada en caso de
     recibir en la configuración: `operation: reset-executions`
 
@@ -251,7 +263,7 @@ def drop_executions_schema(host=None, user=None, passwd=None, db_name=None):
     pass
 
 
-def create_executions_schema(host=None, user=None, passwd=None, db_name=None):
+def create_results_schema(host=None, user=None, passwd=None, db_name=None):
     """Función encargada de crear las tablas en la base de datos. Puede ser llamada en caso de recibir en la
         configuración: `operation: init` o `operation: reset`
 
@@ -293,7 +305,7 @@ def db_ops():
     parser = get_parser()
     args = parser.parse_args()
     config = None
-    supported_ops = ["reset-all", "init", "drop", "reset-executions"]
+    supported_ops = ["reset-all", "init", "drop", "reset-results"]
     required_keys = ["db_name", "host", "user", "passwd", "operation"]
     with open(args.config_file, 'r') as f:
         config = json.load(f)
@@ -314,9 +326,9 @@ def db_ops():
             elif op == "init":
                 create_database(**op_config)
                 create_schema(**op_config)
-            elif op == "reset-executions":
-                drop_executions_schema(**op_config)
-                create_executions_schema(**op_config)
+            elif op == "reset-results":
+                drop_results_schema(**op_config)
+                create_results_schema(**op_config)
             else:
                 drop_schema(**op_config)
         else:
