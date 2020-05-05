@@ -284,11 +284,12 @@ def create_executions_schema(host=None, user=None, passwd=None, db_name=None):
                 type VARCHAR(600),
                 score FLOAT DEFAULT 0.0,
                 total_scores INTEGER DEFAULT 0,
-                price_range VARCHAR(5),
+                price_range VARCHAR(600),
                 style VARCHAR(600),
                 address VARCHAR(600),
                 date DATE NOT NULL,
                 execution_places_types VARCHAR(600), 
+                commercial_premise_gmaps_url VARCHAR(600),
                 PRIMARY KEY(ID)
             )
         """
@@ -297,7 +298,11 @@ def create_executions_schema(host=None, user=None, passwd=None, db_name=None):
             CREATE TABLE IF NOT EXISTS commercial_premise_comments (
                 id SERIAL,
                 commercial_premise_id INTEGER NOT NULL,
+                author VARCHAR (600),
+                publish_date VARCHAR (600),
+                reviews_by_author VARCHAR (600),
                 content TEXT,
+                raw_content TEXT,
                 PRIMARY KEY(id),
                 date DATE NOT NULL,
                 FOREIGN KEY (commercial_premise_id)

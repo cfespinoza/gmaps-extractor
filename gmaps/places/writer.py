@@ -62,13 +62,13 @@ class PlaceDbWriter(DbWriter):
         self.db = None
         self._commercial_premise_query = """
                     INSERT INTO commercial_premise 
-                        (name, zip_code, coordinates, telephone_number, opening_hours, type, score, total_scores, price_range, style, address, date, execution_places_types) 
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id;
+                        (name, zip_code, coordinates, telephone_number, opening_hours, type, score, total_scores, price_range, style, address, date, execution_places_types, commercial_premise_gmaps_url) 
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id;
                     """
         self._commercial_premise_comments_query = """
                             INSERT INTO commercial_premise_comments
-                            (commercial_premise_id, content, date)
-                            VALUES (%s, %s, %s)
+                            (commercial_premise_id, author, publish_date, reviews_by_author, content, raw_content, date)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s)
                         """
         self._commercial_premise_occupation_query = """
                     INSERT INTO commercial_premise_occupation
@@ -173,6 +173,7 @@ class PlaceDbWriter(DbWriter):
         score = float(element.get("score").replace(",", ".")) if element.get("score") else None
         total_score = int(element.get("total_scores").replace(",", "").replace(".", "")) if element.get("total_scores") else None
         execution_places_types = element.get("execution_places_types", None)
+        commercial_premise_gmaps_url = element.get("current_url", "")
         inserted = False
         try:
             cursor.execute(self._find_place_query, (name, date, address))
@@ -189,7 +190,7 @@ class PlaceDbWriter(DbWriter):
                 # `commercial_premise_comments` y `commercial_premise_occupation`
                 values = (
                     name, zip_code, coordinates, telephone, opening_hours, premise_type, score, total_score,
-                    price_range, style, address, date, execution_places_types
+                    price_range, style, address, date, execution_places_types, commercial_premise_gmaps_url
                 )
                 try:
                     self.logger.info("-{place}-: storing commercial premise in database".format(place=name))
@@ -204,10 +205,24 @@ class PlaceDbWriter(DbWriter):
                     raise Exception("avoid registration: commercial premise with name -{name}- with wrong values"
                                     .format(name=name))
                 # Store comments
-                values = [(element_id, comment, date) for comment in element.get("comments", [])]
+                # (commercial_premise_id, author, publish_date, reviews_by_author, content, raw_content, date)
+                values = [(element_id[0],
+                           comment.get("author", ""),
+                           comment.get("publish_date", ""),
+                           comment.get("reviews_by_author", ""),
+                           comment.get("content", ""),
+                           comment.get("raw_content", ""),
+                           date) for comment in element.get("comments", [])]
                 self.logger.info("-{place}-: storing commercial premise comments in database".format(place=name))
-                cursor.executemany(self._commercial_premise_comments_query, values)
-                self.db.commit()
+                try:
+                    cursor.executemany(self._commercial_premise_comments_query, values)
+                    self.db.commit()
+                except Exception as e:
+                    self.db.rollback()
+                    self.logger.error("-{place}-: error during storing comments".format(place=name))
+                    self.logger.error(str(e))
+                    self.logger.error("-{place}-: wrong values:".format(place=name))
+                    self.logger.error(values)
                 # Store occupancy data
                 if element.get("occupancy"):
                     values = []
@@ -222,14 +237,14 @@ class PlaceDbWriter(DbWriter):
                         self.db.rollback()
                         self.logger.error("-{place}-: error during storing occupancy".format(place=name))
                         self.logger.error(str(e))
-                        self.logger.error("-{place}-: wrong values:")
+                        self.logger.error("-{place}-: wrong values:".format(place=name))
                         self.logger.error(values)
                 inserted = True
         except Exception as e:
             self.db.rollback()
             self.logger.error("-{place}-: error during writing data for place".format(place=name))
             self.logger.error(str(e))
-            self.logger.error("-{place}-: wrong values:")
+            self.logger.error("-{place}-: wrong values:".format(place=name))
             self.logger.error(element)
         finally:
             cursor.close()
