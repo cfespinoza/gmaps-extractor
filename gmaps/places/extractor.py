@@ -420,7 +420,7 @@ class PlacesExtractor(AbstractGMapsExtractor):
                                                                                place=place_name))
         return comments
 
-    def _scrap(self, provided_driver=None):
+    def _force_scrap(self, provided_driver=None):
         """Función auxiliar que contiene la lógica de realizar el scrapping en caso de que la url de de búsqueda nos
         redirija a una página de resultados en lugar de la página del local comercial.
 
@@ -470,7 +470,7 @@ class PlacesExtractor(AbstractGMapsExtractor):
             self.logger.warning(
                 "-{place}-: trying to look up reviews again; StaleElementReferenceException detected".format(
                     place=self._place_name))
-            place_info = self._scrap(driver)
+            place_info = self._force_scrap(driver)
         except TimeoutException as te:
             # se ha detectado de timeout esprando a que la página termine de cargar y se vuelve a intentar a
             # extraer la información sin volver a procesar ninguna URL. Llamada recursiva a _scrap
@@ -478,7 +478,7 @@ class PlacesExtractor(AbstractGMapsExtractor):
             self.logger.warning("-{place}-: problems accessing to reviews from ambiguous results: -{url}-".format(
                 place=self._place_name, url=driver.current_url))
             self.logger.warning("-{place}-: trying to look up reviews again; TimeoutException detected.")
-            place_info = self._scrap(driver)
+            place_info = self._force_scrap(driver)
         except Exception as e:
             # error no controlado durante la extracción de la información. Se sale de la ejecución sin forzar la
             # extracción de la información
@@ -528,36 +528,8 @@ class PlacesExtractor(AbstractGMapsExtractor):
                     name=self._place_name, date=self._extraction_date, address=self._place_address))
                 result_to_return = {"is_registered": True}
             else:
-                # empieza el proceso de extracción
-                driver.get(self._url)
-                driver.wait.until(ec.url_changes(self._url))
-                self.force_sleep(self.sleep_m)
-                place_info = self._get_place_info(provided_driver=driver)
+                place_info = self._scrap(driver)
                 result_to_return = self.export_data(place_info)
-        except TimeoutException as te:
-            # en caso de un error de debido a la demora en la carga de la página web, se registra en los logs el error y
-            # se vuelve a intentar la extracción llamando a la función  `_scrap`
-            self.logger.warning("{exception} - timeout exception waiting for place -{place}- in url: -{url}-".format(
-                place=self._place_name,
-                url=self._url,
-                exception=str(te)
-            ))
-            self.logger.warning("-{place}-: forcing to look up information again".format(place=self._place_name))
-            place_info = self._scrap(provided_driver=driver)
-            result_to_return = self.export_data(place_info)
-        except StaleElementReferenceException as sere:
-            # en caso de un error de debido a inconsistencia en el DOM de la página web, se registra en los logs el
-            # error y se vuelve a intentar la extracción llamando a la función  `_scrap`
-            self.logger.warning(
-                "{exception} - stale element reference detected during reviews extraction: -{name}- and -{url}-".format(
-                    exception=str(sere),
-                    name=self._place_name,
-                    url=self._url
-                ))
-            self.force_sleep(self.sleep_m)
-            self.logger.warning("-{name}-: forcing to look up information again".format(name=self._place_name))
-            place_info = self._scrap(provided_driver=driver)
-            result_to_return = self.export_data(place_info)
         except Exception as e:
             self.logger.error("-{name}-: error during reviews extraction: {error}".format(name=self._place_name,
                                                                                           error=str(e)))
@@ -569,3 +541,78 @@ class PlacesExtractor(AbstractGMapsExtractor):
         self.logger.info("-{name}-: scrapping process the url -{url}- has took: -{elapsed}- seconds".format(
             name=self._place_name, elapsed=elapsed, url=self._url))
         return result_to_return
+
+    def recover(self, provided_driver=None, place_id=None):
+        """Función auxiliar encargada de la recuperación de la información.
+        Llama la función scrap y actualiza el registro en la base de datos
+
+        Arguments
+        ---------
+        provided_driver : webdriver.Chrome
+            driver que se usará para realizar la extracción, en caso de no estar definido, se usará el que se haya
+            definido para la instancia de la clase
+        place_id : ínt
+            id del commercial_premise en la base de datos
+
+        Returns
+        -------
+        True
+            en caso de que se exporte correctamente los datos
+        False
+            en caso de que algo hubiera ocurrido durante la extracción o la exportación
+        dict
+            en caso de que no se haya writer definido
+        """
+        logging.info("-{name}-: recovery process for place with url -{url}- is starting".format(
+            name=self._place_name, url=self._url))
+        driver = provided_driver if provided_driver else self.get_driver()
+        init_time = time.time()
+        result_to_return = None
+        try:
+            place_info = self._scrap(driver)
+            place_info["commercial_premise_id"] = place_id
+            result_to_return = self.export_data(data=place_info, is_update=True)
+        except Exception as e:
+            self.logger.error("-{name}-: error during recovery process: {error}".format(name=self._place_name,
+                                                                                        error=str(e)))
+        finally:
+            self.finish()
+
+        end_time = time.time()
+        elapsed = int(end_time - init_time)
+        self.logger.info("-{name}-: recovery process the url -{url}- has took: -{elapsed}- seconds".format(
+            name=self._place_name, elapsed=elapsed, url=self._url))
+        return result_to_return
+
+    def _scrap(self, driver):
+        place_info = None
+        try:
+            # empieza el proceso de extracción
+            driver.get(self._url)
+            driver.wait.until(ec.url_changes(self._url))
+            self.force_sleep(self.sleep_m)
+            place_info = self._get_place_info(provided_driver=driver)
+        except TimeoutException as te:
+            # en caso de un error de debido a la demora en la carga de la página web, se registra en los logs el error y
+            # se vuelve a intentar la extracción llamando a la función  `_scrap`
+            self.logger.warning("{exception} - timeout exception waiting for place -{place}- in url: -{url}-".format(
+                place=self._place_name,
+                url=self._url,
+                exception=str(te)
+            ))
+            self.logger.warning("-{place}-: forcing to look up information again".format(place=self._place_name))
+            place_info = self._force_scrap(provided_driver=driver)
+        except StaleElementReferenceException as sere:
+            # en caso de un error de debido a inconsistencia en el DOM de la página web, se registra en los logs el
+            # error y se vuelve a intentar la extracción llamando a la función  `_scrap`
+            self.logger.warning(
+                "{exception} - stale element reference detected during reviews extraction: -{name}- and -{url}-".format(
+                    exception=str(sere),
+                    name=self._place_name,
+                    url=self._url
+                ))
+            self.force_sleep(self.sleep_m)
+            self.logger.warning("-{name}-: forcing to look up information again".format(name=self._place_name))
+            place_info = self._force_scrap(provided_driver=driver)
+        finally:
+            return place_info

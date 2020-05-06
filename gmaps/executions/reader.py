@@ -37,7 +37,7 @@ class ExecutionDbReader(DbReader):
         """
 
         self._recover_execution = """
-            SELECT id, name, commercial_premise_gmaps_url
+            SELECT id, name, commercial_premise_gmaps_url, zip_code, execution_places_types
             FROM commercial_premise
             WHERE commercial_premise.date=%s
             AND (commercial_premise_gmaps_url is null or commercial_premise_gmaps_url like '%%/search/%%')
@@ -114,10 +114,12 @@ class ExecutionDbReader(DbReader):
         try:
             cursor.execute(self._recover_execution, (date,))
             results = cursor.fetchall()
-            for id, name, url in results:
+            for id, name, url, zip_code, places_types in results:
                 executions.append({"commercial_premise_id": id,
                                    "commercial_premise_name": name,
-                                   "commercial_premise_url": url})
+                                   "commercial_premise_url": url,
+                                   "postal_code": zip_code,
+                                   "places_types": places_types.split("+")})
         except Exception as e:
             self.logger.error("something went wrong trying to retrieve execution info")
             self.logger.error(str(e))

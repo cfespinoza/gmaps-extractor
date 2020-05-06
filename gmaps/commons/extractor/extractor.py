@@ -262,13 +262,15 @@ class AbstractGMapsExtractor:
         obj = self.get_info_obj(xpath_query, external_driver)
         return obj.text if obj else obj
 
-    def export_data(self, data):
+    def export_data(self, data, is_update=False):
         """Función encargada de hacer el volcado de la información en el soporte de salida que se haya configurado.
 
         Parameters
         ----------
         data : dict
             datos que se van a volcar al soporte de salida (base de datos o fichero)
+        is_update : bool
+            flag que determina si se está actualizando, true si es un recovery
 
         Returns
         -------
@@ -277,7 +279,7 @@ class AbstractGMapsExtractor:
             la función `write` haya sido satisfactoria
         """
         if self._writer:
-            return self._writer.write(data)
+            return self._writer.write(data, is_update)
         else:
             return data
 

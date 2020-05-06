@@ -184,8 +184,67 @@ def scrap_place(arguments):
                               postal_code=postal_code,
                               places_types=places_types,
                               extraction_date=extraction_date)
-    results = scraper.scrap()
+    results = False
+    if arguments.get("is_recovery") and arguments.get("place_id"):
+        results = scraper.recover(place_id=arguments.get("place_id"))
+    else:
+        results = scraper.scrap()
     return results
+
+
+def extraction(logger=None, execution_config=None, today_date=None):
+    # se obtienen los códigos postales del soporte de entrada establecido en la configuración para los cuales se
+    # extraerán la información de los locales comerciales.
+    input_config = execution_config.get("input_config")
+    output_config = execution_config.get("output_config")
+    zip_config = get_zip_execution_obj_config(input_config)
+    logger.info("zip codes to extract url: {zip_config}".format(zip_config=zip_config))
+    # se construye la lista de objetos que serán los argumentos para la llamada a la función `scrap_zip_code` (
+    # extrae las urls de los locales comerciales) por cada uno de los procesos que formen el pool de procesos.
+    zip_arguments_list = [{"driver_location": execution_config.get("driver_path"),
+                           "postal_code": zip_info.get("postal_code"),
+                           "places_types": zip_info.get("types"),
+                           "num_pages": execution_config.get("results_pages"),
+                           "base_url": zip_info.get("base_url"),
+                           "num_reviews": execution_config.get("num_reviews"),
+                           "output_config": execution_config.get("output_config"),
+                           "executors": execution_config.get("place_executors", 3),
+                           "extraction_date": today_date.isoformat()
+                           } for zip_info in zip_config]
+    with GmapsProcessPool(processes=execution_config.get("executors")) as pool:
+        zip_results = pool.map(func=scrap_zip_code, iterable=iter(zip_arguments_list))
+    # zip_results será el resultado de la ejecución de todos los procesos, por lo cual será de tipo list de list, y
+    # es necesario aplanarlo
+    places_argument_list = list(itertools.chain.from_iterable(zip_results))
+    logger.info("there have been found -{total}- places".format(total=len(places_argument_list)))
+
+
+def recovery(logger, execution_config, today_date):
+    logger.info("recovering missing commercial premise from execution")
+    output_config_obj = execution_config.get("output_config")
+    output_config = output_config_obj.get(output_config_obj.get("type")).get("config")
+    recovery_date = datetime.strptime(execution_config.get("recovery_date"), "%Y-%m-%d").date() if execution_config.get(
+        "recovery_date") else today_date
+    reader = ExecutionDbReader(output_config)
+    reader.auto_boot()
+    executions = reader.recover_execution(date=recovery_date.isoformat())
+    reader.finish()
+    recovery_arguments_list = [{"driver_location": execution_config.get("driver_path"),
+                                "postal_code": exec_place.get("postal_code"),
+                                "output_config": output_config_obj,
+                                "extraction_date": recovery_date.isoformat(),
+                                "url": exec_place.get("commercial_premise_url"),
+                                "place_address": exec_place.get("address", ""),
+                                "place_name": exec_place.get("commercial_premise_name"),
+                                "num_reviews": execution_config.get("num_reviews"),
+                                "places_types": exec_place.get("places_types"),
+                                "place_id": int(exec_place.get("commercial_premise_id")),
+                                "is_recovery": True
+                                } for exec_place in executions]
+
+    with Pool(processes=execution_config.get("executors", None)) as pool:
+        places_results = pool.map(func=scrap_place, iterable=iter(recovery_arguments_list))
+    return places_results
 
 
 def extract():
@@ -209,30 +268,11 @@ def extract():
     # si el fichero de configuración que se ha pasado a la ejecución contiene las claves requeridas se procede a la
     # ejecución
     if validate_required_keys(keys=required_keys, obj=execution_config):
-        # se obtienen los códigos postales del soporte de entrada establecido en la configuración para los cuales se
-        # extraerán la información de los locales comerciales.
-        input_config = execution_config.get("input_config")
-        output_config = execution_config.get("output_config")
-        zip_config = get_zip_execution_obj_config(input_config)
-        logger.info("zip codes to extract url: {zip_config}".format(zip_config=zip_config))
-        # se construye la lista de objetos que serán los argumentos para la llamada a la función `scrap_zip_code` (
-        # extrae las urls de los locales comerciales) por cada uno de los procesos que formen el pool de procesos.
-        zip_arguments_list = [{"driver_location": execution_config.get("driver_path"),
-                               "postal_code": zip_info.get("postal_code"),
-                               "places_types": zip_info.get("types"),
-                               "num_pages": execution_config.get("results_pages"),
-                               "base_url": zip_info.get("base_url"),
-                               "num_reviews": execution_config.get("num_reviews"),
-                               "output_config": execution_config.get("output_config"),
-                               "executors": execution_config.get("place_executors", 3),
-                               "extraction_date": today_date.isoformat()
-                               } for zip_info in zip_config]
-        with GmapsProcessPool(processes=execution_config.get("executors")) as pool:
-            zip_results = pool.map(func=scrap_zip_code, iterable=iter(zip_arguments_list))
-        # zip_results será el resultado de la ejecución de todos los procesos, por lo cual será de tipo list de list, y
-        # es necesario aplanarlo
-        places_argument_list = list(itertools.chain.from_iterable(zip_results))
-        logger.info("there have been found -{total}- places".format(total=len(places_argument_list)))
+        if execution_config.get("operation", "") == "recovery":
+            recovery(logger=logger, execution_config=execution_config, today_date=today_date)
+        else:
+            extraction(logger=logger, execution_config=execution_config, today_date=today_date)
+
     else:
         logger.error("there are error in configuration files. Some required configurations are not present")
         logger.error("required keys: {keys}".format(keys=required_keys))

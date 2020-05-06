@@ -47,7 +47,7 @@ class UrlFileWriter(FileWriter):
             self.logger.error("root path where results will be written does not exist")
             raise Exception("results directory does not exist")
 
-    def write(self, element):
+    def write(self, element, is_update=False):
         file_name = "{name}_{sufix}.{format}".format(name=element.get("zip_code"),
                                                      format=self._file_format,
                                                      sufix=self._sufix)
@@ -118,14 +118,15 @@ class UrlDbWriter(DbWriter):
             database=self.db_name
         )
 
-    def write(self, element):
+    def write(self, element, is_update=False):
         """Escribe la información del código postal en la base de datos.
 
         Arguments
         ---------
         element : dict
             diccionario con la información del código postal y la url de acceso búsqueda
-
+        is_update : bool
+            flag que determina si se está ejecutando un proceso de recovery
         Returns
         -------
         True
