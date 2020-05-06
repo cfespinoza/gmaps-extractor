@@ -36,6 +36,13 @@ class ExecutionDbReader(DbReader):
             JOIN execution_info as b on a.zip_code = b.zip_code and LOWER(a.country) = LOWER(b.country)
         """
 
+        self._recover_execution = """
+            SELECT id, name, commercial_premise_gmaps_url
+            FROM commercial_premise
+            WHERE commercial_premise.date=%s
+            AND (commercial_premise_gmaps_url is null or commercial_premise_gmaps_url like '%%/search/%%')
+        """
+
     def finish(self):
         """Función encargada de cerrar la conexión a la base de datos."""
         self.db.close()
@@ -77,6 +84,40 @@ class ExecutionDbReader(DbReader):
                                    "base_url": url,
                                    "types": str(types).split(","),
                                    "country": str(country).capitalize()})
+        except Exception as e:
+            self.logger.error("something went wrong trying to retrieve execution info")
+            self.logger.error(str(e))
+        finally:
+            cursor.close()
+            return executions
+
+    def recover_execution(self, date):
+        """Función encargada de ejecutar la query y obtener los resultados de la base de datos y devolverlos en forma de
+        json array
+
+        Returns
+        -------
+        executions: list
+            lista de códigos postales de los que se extraerá la información
+            example:
+            ```json
+                [{
+                    "postal_code": "48005",
+                    "base_url": "https://www.google.com/maps/place/48005+Bilbao,+Biscay/@43.2598164,-2.9304266,15z",
+                    "types": ["Restaurants", "Bars"],
+                    "country": "Spain""
+                }]
+            ```
+        """
+        cursor = self.db.cursor()
+        executions = []
+        try:
+            cursor.execute(self._recover_execution, (date,))
+            results = cursor.fetchall()
+            for id, name, url in results:
+                executions.append({"commercial_premise_id": id,
+                                   "commercial_premise_name": name,
+                                   "commercial_premise_url": url})
         except Exception as e:
             self.logger.error("something went wrong trying to retrieve execution info")
             self.logger.error(str(e))

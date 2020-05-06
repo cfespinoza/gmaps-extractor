@@ -2,6 +2,8 @@ import json
 import unittest
 from datetime import datetime
 
+from gmaps.executions.reader import ExecutionDbReader
+
 from gmaps.places.extractor import PlacesExtractor
 from gmaps.places.writer import PlaceDbWriter
 from gmaps.results.optimized_extractor import OptimizedResultsExtractor
@@ -60,9 +62,9 @@ class TestGmapsScrapper(unittest.TestCase):
 
     def test_scrap_single_place_no_db(self):
         place = {
-            "name": "Restaurante Costa Verde",
-            "address": "Calle Vía Carpetana, 322",
-            "url": "https://www.google.com/maps/search/28047+Madrid+Restaurante+Bar+Restaurante+Costa+Verde/@40.3911256,-3.763457,14z"
+            "name": "Cafetería Cobar",
+            "address": "",
+            "url": "https://www.google.com/maps/search/28053+Madrid+Bar+Restaurante+Cafeteria+Cafeter%C3%ADa+Cobar/@40.376347,-3.6869967,14z"
         }
 
         extraction_date = datetime.now().isoformat()
@@ -113,6 +115,22 @@ class TestGmapsScrapper(unittest.TestCase):
         print(json.dumps(results))
         assert len(results.keys()) > 0
         assert len(results.get("opening_hours")) == 7
+
+    def get_recovered_executions(self, date):
+        reader = ExecutionDbReader(self._output_config)
+        reader.auto_boot()
+        # executions = reader.recover_execution(date="2020-05-05")
+        executions = reader.recover_execution(date=date.isoformat())
+        reader.finish()
+        return executions
+
+    def test_recover_execution(self):
+        date = datetime(2020, 5, 5)
+        executions = self.get_recovered_executions(date)
+        print(json.dumps(executions))
+        assert all(["commercial_premise_id" in execution
+                    and "commercial_premise_name" in execution
+                    and "commercial_premise_url" in execution for execution in executions])
 
 
 if __name__ == '__main__':
