@@ -65,6 +65,25 @@ class PlaceDbWriter(DbWriter):
                         (name, zip_code, coordinates, telephone_number, opening_hours, type, score, total_scores, price_range, style, address, date, execution_places_types, commercial_premise_gmaps_url) 
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id;
                     """
+        self._update_commercial_premise_query = """
+                            UPDATE commercial_premise SET 
+                                name = %s,
+                                zip_code = %s,
+                                coordinates = %s,
+                                telephone_number = %s,
+                                opening_hours = %s,
+                                type = %s,
+                                score = %s,
+                                total_scores = %s,
+                                price_range = %s,
+                                style = %s,
+                                address = %s,
+                                date = %s,
+                                execution_places_types = %s,
+                                commercial_premise_gmaps_url = %s
+                            WHERE id = %s
+                            RETURNING id;
+                            """
         self._commercial_premise_comments_query = """
                             INSERT INTO commercial_premise_comments
                             (commercial_premise_id, author, publish_date, reviews_by_author, content, raw_content, date)
@@ -141,13 +160,16 @@ class PlaceDbWriter(DbWriter):
             cursor.close()
             return is_registered
 
-    def write(self, element):
+    def write(self, element, is_update=False):
         """Escribe la información de element en la base de datos, en las distintas tablas.
 
         Arguments
         ---------
         element : dict
             diccionario con la información necesaria para escribir en las tablas de la base de datos.
+
+        is_update : bool
+            flag que determina si se está ejecutando un proceso de recovery
 
         Returns
         -------
@@ -174,12 +196,13 @@ class PlaceDbWriter(DbWriter):
         total_score = int(element.get("total_scores").replace(",", "").replace(".", "")) if element.get("total_scores") else None
         execution_places_types = element.get("execution_places_types", None)
         commercial_premise_gmaps_url = element.get("current_url", "")
+        updatable_id = element.get("commercial_premise_id") if is_update else None
         inserted = False
         try:
             cursor.execute(self._find_place_query, (name, date, address))
             db_element = cursor.fetchone()
             element_id = None
-            if db_element:
+            if db_element and not is_update:
                 # si el local comercial ya existe en la base de datos para la fecha de ejecución, se marca como
                 # insertado: `inserted = True`
                 self.logger.info("-{place}-: commercial premise found in database".format(place=name))
@@ -190,11 +213,16 @@ class PlaceDbWriter(DbWriter):
                 # `commercial_premise_comments` y `commercial_premise_occupation`
                 values = (
                     name, zip_code, coordinates, telephone, opening_hours, premise_type, score, total_score,
+                    price_range, style, address, date, execution_places_types, commercial_premise_gmaps_url,
+                    updatable_id
+                ) if is_update else (
+                    name, zip_code, coordinates, telephone, opening_hours, premise_type, score, total_score,
                     price_range, style, address, date, execution_places_types, commercial_premise_gmaps_url
                 )
+                query = self._update_commercial_premise_query if is_update else self._commercial_premise_query
                 try:
                     self.logger.info("-{place}-: storing commercial premise in database".format(place=name))
-                    cursor.execute(self._commercial_premise_query, values)
+                    cursor.execute(query, values)
                     element_id = cursor.fetchone()
                     self.db.commit()
                 except Exception as e:
@@ -304,7 +332,7 @@ class PlaceFileWriter(FileWriter):
         # todo by the moment always returns false
         return False
 
-    def write(self, element):
+    def write(self, element, is_update=False):
         """Vuelca la información de `element` en un fichero generado dinámicamente.
 
         Arguments
@@ -312,6 +340,8 @@ class PlaceFileWriter(FileWriter):
         element : dict
             diccionario que se escribirá en un fichero creado dinámicamente. Como resultado habrá un fichero por local
             comercial encontrado
+        is_update : bool
+            flag que determina si se está ejecutando un proceso de recovery
         """
         if element.get("name"):
             file_name = "{name}_{sufix}.{format}".format(

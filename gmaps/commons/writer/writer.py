@@ -34,7 +34,7 @@ class AbstractWriter:
     def is_registered(self, data):
         raise NotImplementedError("Method must be implemented in subclass")
 
-    def write(self, element):
+    def write(self, element, is_update=False):
         raise NotImplementedError("Method must be implemented in subclass")
 
 
@@ -62,7 +62,7 @@ class DbWriter(AbstractWriter):
     def auto_boot(self):
         raise NotImplementedError("Method must be implemented in subclass")
 
-    def write(self, element):
+    def write(self, element, is_update=False):
         raise NotImplementedError("Method must be implemented in subclass")
 
     def is_registered(self, data):
@@ -90,7 +90,7 @@ class FileWriter(AbstractWriter):
     def auto_boot(self):
         raise NotImplementedError("Method must be implemented in subclass")
 
-    def write(self, element):
+    def write(self, element, is_update=False):
         raise NotImplementedError("Method must be implemented in subclass")
 
     def is_registered(self, data):
@@ -108,6 +108,6 @@ class PrinterWriter(AbstractWriter):
     def is_registered(self, data):
         return False
 
-    def write(self, element):
+    def write(self, element, is_update=False):
         print(json.dumps(element))
         return element
