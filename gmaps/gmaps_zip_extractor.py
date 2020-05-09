@@ -242,7 +242,7 @@ def recovery(logger, execution_config, today_date):
                                 "is_recovery": True
                                 } for exec_place in executions]
 
-    with Pool(processes=execution_config.get("executors", None)) as pool:
+    with Pool(processes=execution_config.get("recovery_executors", None)) as pool:
         places_results = pool.map(func=scrap_place, iterable=iter(recovery_arguments_list))
     return places_results
 
@@ -272,7 +272,7 @@ def extract():
             recovery(logger=logger, execution_config=execution_config, today_date=today_date)
         else:
             extraction(logger=logger, execution_config=execution_config, today_date=today_date)
-
+            recovery(logger=logger, execution_config=execution_config, today_date=today_date)
     else:
         logger.error("there are error in configuration files. Some required configurations are not present")
         logger.error("required keys: {keys}".format(keys=required_keys))
