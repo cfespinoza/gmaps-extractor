@@ -43,6 +43,21 @@ class ExecutionDbReader(DbReader):
             AND (commercial_premise_gmaps_url is null or commercial_premise_gmaps_url like '%%/search/%%')
         """
 
+        self._forced_recovery_execution = """
+        select cast(aux.id as integer) as id, aux.name as name, aux.url as commercial_premise_gmaps_url, 
+        aux.zip_code as zip_code, aux.types as execution_places_types
+        from (
+            select string_agg(cast(id as varchar), ',') as id, name, string_agg(zip_code, ',') as zip_code, 
+            count(commercial_premise_gmaps_url) as urls_num, string_agg(commercial_premise_gmaps_url, ',') as url, 
+            string_agg(execution_places_types, ',') as types
+            from commercial_premise
+            where commercial_premise.date = %s
+            and (commercial_premise_gmaps_url is null or commercial_premise_gmaps_url like '%%/search/%%')
+            group by name, execution_places_types
+        ) as aux
+        where aux.urls_num = 1
+        """
+
     def finish(self):
         """Función encargada de cerrar la conexión a la base de datos."""
         self.db.close()
@@ -91,7 +106,7 @@ class ExecutionDbReader(DbReader):
             cursor.close()
             return executions
 
-    def recover_execution(self, date):
+    def recover_execution(self, date=None, is_forced=False):
         """Función encargada de ejecutar la query y obtener los resultados de la base de datos y devolverlos en forma de
         json array
 
@@ -112,7 +127,8 @@ class ExecutionDbReader(DbReader):
         cursor = self.db.cursor()
         executions = []
         try:
-            cursor.execute(self._recover_execution, (date,))
+            query = self._forced_recovery_execution if is_forced else self._recover_execution
+            cursor.execute(query, (date,))
             results = cursor.fetchall()
             for id, name, url, zip_code, places_types in results:
                 executions.append({"commercial_premise_id": id,

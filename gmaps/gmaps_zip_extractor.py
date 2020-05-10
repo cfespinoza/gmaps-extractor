@@ -219,7 +219,7 @@ def extraction(logger=None, execution_config=None, today_date=None):
     logger.info("there have been found -{total}- places".format(total=len(places_argument_list)))
 
 
-def recovery(logger, execution_config, today_date):
+def recovery(logger, execution_config, today_date, is_forced=False):
     logger.info("recovering missing commercial premise from execution")
     output_config_obj = execution_config.get("output_config")
     output_config = output_config_obj.get(output_config_obj.get("type")).get("config")
@@ -227,7 +227,7 @@ def recovery(logger, execution_config, today_date):
         "recovery_date") else today_date
     reader = ExecutionDbReader(output_config)
     reader.auto_boot()
-    executions = reader.recover_execution(date=recovery_date.isoformat())
+    executions = reader.recover_execution(date=recovery_date.isoformat(), is_forced=is_forced)
     reader.finish()
     recovery_arguments_list = [{"driver_location": execution_config.get("driver_path"),
                                 "postal_code": exec_place.get("postal_code"),
@@ -269,10 +269,12 @@ def extract():
     # ejecución
     if validate_required_keys(keys=required_keys, obj=execution_config):
         if execution_config.get("operation", "") == "recovery":
-            recovery(logger=logger, execution_config=execution_config, today_date=today_date)
+            is_forced = execution_config.get("forced_recovery", False)
+            recovery(logger=logger, execution_config=execution_config, today_date=today_date, is_forced=is_forced)
         else:
             extraction(logger=logger, execution_config=execution_config, today_date=today_date)
             recovery(logger=logger, execution_config=execution_config, today_date=today_date)
+            recovery(logger=logger, execution_config=execution_config, today_date=today_date, is_forced=True)
     else:
         logger.error("there are error in configuration files. Some required configurations are not present")
         logger.error("required keys: {keys}".format(keys=required_keys))

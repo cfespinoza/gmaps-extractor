@@ -6,8 +6,9 @@
   "log_dir": "/home/cflores/cflores_workspace/gmaps-extractor/results",
   "results_pages": 2,
   "recovery_date": "2020-05-05",
-  "recovery_executors": null,
+  "recovery_executors": 15,
   "operation": "recovery",
+  "forced_recovery": true,
   "num_reviews": 3,
   "input_config": {
     "type": "db",
