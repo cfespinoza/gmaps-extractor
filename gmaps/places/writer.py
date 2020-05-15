@@ -230,8 +230,9 @@ class PlaceDbWriter(DbWriter):
                     self.logger.error("-{place}-: error storing commercial premise".format(place=name))
                     self.logger.error(str(e))
                     self.logger.error("-{place}-: wrong value: {values}".format(place=name, values=values))
-                    raise Exception("avoid registration: commercial premise with name -{name}- with wrong values"
-                                    .format(name=name))
+                    raise Exception(
+                        "-{place}-: avoid registration: commercial premise with name -{name}- with wrong values".format(
+                            place=name))
                 # Store comments
                 # (commercial_premise_id, author, publish_date, reviews_by_author, content, raw_content, date)
                 values = [(element_id[0],
@@ -273,7 +274,7 @@ class PlaceDbWriter(DbWriter):
             self.logger.error("-{place}-: error during writing data for place".format(place=name))
             self.logger.error(str(e))
             self.logger.error("-{place}-: wrong values:".format(place=name))
-            self.logger.error(element)
+            self.logger.error(json.dumps(element))
         finally:
             cursor.close()
             return inserted
