@@ -2,6 +2,5 @@
   "host": "localhost",
   "db_name": "gmaps",
   "user": "postgres",
-  "passwd": "1234",
-  "operation": "reset"
+  "passwd": "1234"
 }
