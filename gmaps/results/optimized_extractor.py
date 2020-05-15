@@ -82,44 +82,6 @@ class OptimizedResultsExtractor(AbstractGMapsExtractor):
         self._next_button_xpath = "//div[@class='gm2-caption']/div/div/button[@jsaction='pane.paginationSection.nextPage']"
         self.auto_boot()
 
-    def extract_current_address(self, name, address_str):
-        """Función encargada de extraer la dirección de la descripción del elemento web de la sección de resultados
-
-        Arguments
-        ---------
-        name : str
-            nombre del lugar a extraer
-        address_str : str
-            descripción del resultado de la búsqueda
-
-        Returns
-        -------
-        str :
-            dirección o dirección parcial del local comercial encontrado en el elemento web de la sección de resultados
-
-        """
-        self.logger.debug("-{postal_code}-: place -{name}- have been detected with address: {address}".format(
-            postal_code=self._postal_code, name=name, address=address_str
-        ))
-        info_separator = "·"
-        address = address_str
-        if address_str:
-            if info_separator in address_str:
-                compressed_address = [item.strip() for item in address_str.split(info_separator)]
-                if len(compressed_address) == 3:
-                    price_range = compressed_address[0]
-                    style = compressed_address[1]
-                    address = compressed_address[2]
-                else:
-                    price_range = None
-                    style = compressed_address[0]
-                    address = compressed_address[1]
-
-        self.logger.debug("-{postal_code}-: place -{name}- have formatted address: {address}".format(
-            postal_code=self._postal_code, name=name, address=address
-        ))
-        return address
-
     def get_basic_info(self, single_rest_result):
         """Función encargada de extraer la información, como nombre, url y dirección básica de un resultado de local
         comercial

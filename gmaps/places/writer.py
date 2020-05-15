@@ -1,8 +1,10 @@
+import hashlib
 import json
 import logging
 import os
 
 import psycopg2
+from psycopg2._psycopg import IntegrityError
 
 from gmaps.commons.writer.writer import DbWriter, FileWriter
 
@@ -62,8 +64,23 @@ class PlaceDbWriter(DbWriter):
         self.db = None
         self._commercial_premise_query = """
                     INSERT INTO commercial_premise 
-                        (name, zip_code, coordinates, telephone_number, opening_hours, type, score, total_scores, price_range, style, address, date, execution_places_types, commercial_premise_gmaps_url) 
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id;
+                        (name, 
+                        zip_code, 
+                        coordinates, 
+                        telephone_number, 
+                        opening_hours, 
+                        type, 
+                        score, 
+                        total_scores, 
+                        price_range, 
+                        style, 
+                        address, 
+                        date, 
+                        execution_places_types, 
+                        commercial_premise_gmaps_url, 
+                        hash_commercial_premise) 
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) 
+                    RETURNING id;
                     """
         self._update_commercial_premise_query = """
                             UPDATE commercial_premise SET 
@@ -80,23 +97,37 @@ class PlaceDbWriter(DbWriter):
                                 address = %s,
                                 date = %s,
                                 execution_places_types = %s,
-                                commercial_premise_gmaps_url = %s
+                                commercial_premise_gmaps_url = %s,
+                                hash_commercial_premise = %s
                             WHERE id = %s
                             RETURNING id;
                             """
         self._commercial_premise_comments_query = """
                             INSERT INTO commercial_premise_comments
-                            (commercial_premise_id, author, publish_date, reviews_by_author, content, raw_content, date)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s)
+                            (commercial_premise_id, 
+                            author, 
+                            publish_date, 
+                            reviews_by_author, 
+                            content, 
+                            raw_content, 
+                            date,
+                            hash_commercial_premise)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                         """
         self._commercial_premise_occupation_query = """
                     INSERT INTO commercial_premise_occupation
                     (
-                        commercial_premise_id, week_day, time_period, occupation, date
+                        commercial_premise_id, week_day, time_period, occupation, date, hash_commercial_premise
                     )
-                    VALUES (%s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s)
                 """
-        self._find_place_query = """SELECT id FROM commercial_premise WHERE name = %s and date = %s and address like %s"""
+        self._find_place_query = """
+        SELECT id FROM commercial_premise WHERE name = %s and date = %s and address like %s
+        """
+
+        self._delete_place_query = """
+            DELETE FROM commercial_premise WHERE id = %s
+        """
         self.auto_boot()
 
     def auto_boot(self):
@@ -196,6 +227,7 @@ class PlaceDbWriter(DbWriter):
         total_score = int(element.get("total_scores").replace(",", "").replace(".", "")) if element.get("total_scores") else None
         execution_places_types = element.get("execution_places_types", None)
         commercial_premise_gmaps_url = element.get("current_url", "")
+        address_hash = hashlib.sha256(address.encode()).hexdigest() if address else None
         updatable_id = element.get("commercial_premise_id") if is_update else None
         inserted = False
         try:
@@ -214,10 +246,11 @@ class PlaceDbWriter(DbWriter):
                 values = (
                     name, zip_code, coordinates, telephone, opening_hours, premise_type, score, total_score,
                     price_range, style, address, date, execution_places_types, commercial_premise_gmaps_url,
-                    updatable_id
+                    address_hash, updatable_id
                 ) if is_update else (
                     name, zip_code, coordinates, telephone, opening_hours, premise_type, score, total_score,
-                    price_range, style, address, date, execution_places_types, commercial_premise_gmaps_url
+                    price_range, style, address, date, execution_places_types, commercial_premise_gmaps_url,
+                    address_hash
                 )
                 query = self._update_commercial_premise_query if is_update else self._commercial_premise_query
                 try:
@@ -225,13 +258,26 @@ class PlaceDbWriter(DbWriter):
                     cursor.execute(query, values)
                     element_id = cursor.fetchone()
                     self.db.commit()
+                except IntegrityError as ie:
+                    self.db.rollback()
+                    self.logger.error("-{place}-: integrity error while storing commercial premise".format(place=name))
+                    if is_update:
+                        self.logger.error("-{place}-: integrity error detected in recovery process".format(place=name))
+                        self.logger.error("-{place}-: deleting commercial premise with id: {id}".format(
+                            place=name, id=updatable_id))
+                        cursor.execute(self._delete_place_query, (updatable_id,))
+                        self.db.commit()
+                    raise ie
                 except Exception as e:
                     self.db.rollback()
                     self.logger.error("-{place}-: error storing commercial premise".format(place=name))
+                    if is_update:
+                        print(e)
                     self.logger.error(str(e))
                     self.logger.error("-{place}-: wrong value: {values}".format(place=name, values=values))
-                    raise Exception("avoid registration: commercial premise with name -{name}- with wrong values"
-                                    .format(name=name))
+                    raise Exception(
+                        "-{place}-: avoid registration: commercial premise with name with wrong values".format(
+                            place=name))
                 # Store comments
                 # (commercial_premise_id, author, publish_date, reviews_by_author, content, raw_content, date)
                 values = [(element_id[0],
@@ -240,7 +286,8 @@ class PlaceDbWriter(DbWriter):
                            comment.get("reviews_by_author", ""),
                            comment.get("content", ""),
                            comment.get("raw_content", ""),
-                           date) for comment in element.get("comments", [])]
+                           date,
+                           address_hash) for comment in element.get("comments", [])]
                 self.logger.info("-{place}-: storing commercial premise comments in database".format(place=name))
                 try:
                     cursor.executemany(self._commercial_premise_comments_query, values)
@@ -257,7 +304,7 @@ class PlaceDbWriter(DbWriter):
                     self.logger.info("-{place}-: storing commercial premise occupancy in database".format(place=name))
                     for week_day, content in self.decompose_occupancy_data(element["occupancy"]).items():
                         if content and content.items():
-                            values += [(element_id, week_day, key, value, date) for key, value in content.items()]
+                            values += [(element_id, week_day, key, value, date, address_hash) for key, value in content.items()]
                     try:
                         cursor.executemany(self._commercial_premise_occupation_query, values)
                         self.db.commit()
@@ -273,7 +320,7 @@ class PlaceDbWriter(DbWriter):
             self.logger.error("-{place}-: error during writing data for place".format(place=name))
             self.logger.error(str(e))
             self.logger.error("-{place}-: wrong values:".format(place=name))
-            self.logger.error(element)
+            self.logger.error(json.dumps(element))
         finally:
             cursor.close()
             return inserted

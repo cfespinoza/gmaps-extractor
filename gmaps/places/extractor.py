@@ -316,6 +316,7 @@ class PlacesExtractor(AbstractGMapsExtractor):
         total_score_obj = self.get_obj_text(xpath_query=self._total_votes_xpath, external_driver=driver)
         total_score_val = total_score_obj.replace("(", "").replace(")", "") if total_score_obj else total_score_obj
         address_obj = self.get_obj_text(xpath_query=self._address_xpath, external_driver=driver)
+        address_obj_val = address_obj if address_obj else self._place_address
         coords_obj = self.get_obj_text(xpath_query=self._coords_xpath_selector, external_driver=driver)
         telephone_obj = self.get_obj_text(xpath_query=self._telephone_xpath_selector, external_driver=driver)
         opening_obj = self.get_info_obj(xpath_query=self._openning_hours_xpath_selector, external_driver=driver)
@@ -337,7 +338,7 @@ class PlacesExtractor(AbstractGMapsExtractor):
             "name": name_val,
             "score": score_obj,
             "total_scores": total_score_val,
-            "address": address_obj,
+            "address": address_obj_val,
             "occupancy": occupancy_obj,
             "coordinates": coords_obj,
             "telephone_number": telephone_obj,
@@ -448,13 +449,16 @@ class PlacesExtractor(AbstractGMapsExtractor):
             self.force_sleep(self.sleep_xs)
             # búsqueda del local comercial en el listado de resultados: `self.shared_result_elements_xpath_query`
             page_elements = driver.find_elements_by_xpath(self.shared_result_elements_xpath_query)
-            places_objs = {place.text.split("\n")[0]: place for place in page_elements}
-            if self._place_name in places_objs.keys():
+            place_obj = self.found_place_in_list(page_elements)
+            # places_objs = {place.text.split("\n")[0]: place for place in page_elements}
+            # if self._place_name in places_objs.keys():
+            if place_obj:
                 # el nombre del local comercial se encuentra en los resultados y se procede a clickar sobre él y extraer
                 # la información una vez se haya cargado la página del local comercial
                 self.logger.debug("-{place}-: found in search list due to ambiguous name nearby".format(
                     place=self._place_name))
-                found_place = places_objs.get(self._place_name)
+                # found_place = places_objs.get(self._place_name)
+                found_place = place_obj
                 driver.execute_script("arguments[0].click();", found_place)
                 driver.wait.until(ec.url_changes(driver.current_url))
                 self.force_sleep(self.sleep_m)
@@ -616,3 +620,16 @@ class PlacesExtractor(AbstractGMapsExtractor):
             place_info = self._force_scrap(provided_driver=driver)
         finally:
             return place_info
+
+    def found_place_in_list(self, page_elements):
+        for place in page_elements:
+            splitted = place.text.split("\n")
+            name = splitted[0]
+            address = self.extract_current_address(name, splitted[2]) if len(splitted) > 2 else None
+            if address and address == self._place_address:
+                self.logger.debug("-{place}-: found in search list due to ambiguous name nearby with {address}"
+                                  .format(address=address, place=self._place_name))
+                return place
+            elif name == self._place_name:
+                return place
+        return None
