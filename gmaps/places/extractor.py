@@ -156,7 +156,8 @@ class PlacesExtractor(AbstractGMapsExtractor):
         }
         self._coords_xpath_selector = "//*[@id='pane']/div/div[1]/div/div/div[@data-section-id='ol']/div/div[@class='section-info-line']/span[@class='section-info-text']/span[@class='widget-pane-link']"
         self._telephone_xpath_selector = "//*[@id='pane']/div/div[1]/div/div/div[@data-section-id='pn0']/div/div[@class='section-info-line']/span/span[@class='widget-pane-link']"
-        self._openning_hours_xpath_selector = "//*[@id='pane']/div/div[1]/div/div/div[@class='cX2WmPgCkHi__root gm2-body-2 cX2WmPgCkHi__dense']/div[3]"
+        self._openning_hours_xpath_selector = "//*[@id='pane']/div/div[1]/div/div/div[@class='cX2WmPgCkHi__root gm2-body-2 cX2WmPgCkHi__dense']/div[@class='section-open-hours-container cX2WmPgCkHi__container-hoverable']"
+        self._openning_hours_xpath_selector_aux = "//*[@id='pane']/div/div[1]/div/div/div[@class='cX2WmPgCkHi__root gm2-body-2 cX2WmPgCkHi__has-special-hours cX2WmPgCkHi__dense']/div[@class='section-open-hours-container cX2WmPgCkHi__container-hoverable']"
         self._back_button_xpath = "//*[@id='pane']/div/div/div[@class='widget-pane-content-holder']/div/button"
         self._all_reviews_back_button_xpath = "//*[@id='pane']/div/div[@tabindex='-1']//button[@jsaction='pane.topappbar.back;focus:pane.focusTooltip;blur:pane.blurTooltip']"
         self._occupancy_by_hours_xpath = "div[contains(@class, 'section-popular-times-graph')]/div[contains(@class, 'section-popular-times-bar')]"
@@ -319,7 +320,8 @@ class PlacesExtractor(AbstractGMapsExtractor):
         address_obj_val = address_obj if address_obj else self._place_address
         coords_obj = self.get_obj_text(xpath_query=self._coords_xpath_selector, external_driver=driver)
         telephone_obj = self.get_obj_text(xpath_query=self._telephone_xpath_selector, external_driver=driver)
-        opening_obj = self.get_info_obj(xpath_query=self._openning_hours_xpath_selector, external_driver=driver)
+        opening_obj_el = self.get_info_obj(xpath_query=self._openning_hours_xpath_selector, external_driver=driver)
+        opening_obj = opening_obj_el if opening_obj_el else self.get_info_obj(xpath_query=self._openning_hours_xpath_selector_aux, external_driver=driver)
         price_range = self.get_obj_text(xpath_query=self._price_range, external_driver=driver)
         style = self.get_obj_text(xpath_query=self._style, external_driver=driver)
         premise_type = self.get_obj_text(xpath_query=self._premise_type, external_driver=driver)
@@ -443,6 +445,7 @@ class PlacesExtractor(AbstractGMapsExtractor):
             "zip_code": self._postal_code,
             "date": self._extraction_date,
             "address": self._place_address,
+            "execution_places_types": self._places_types,
             "extractor_url": self._url
         }
         try:

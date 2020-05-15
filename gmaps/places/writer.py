@@ -226,7 +226,7 @@ class PlaceDbWriter(DbWriter):
         score = float(element.get("score").replace(",", ".")) if element.get("score") else None
         total_score = int(element.get("total_scores").replace(",", "").replace(".", "")) if element.get("total_scores") else None
         execution_places_types = element.get("execution_places_types", None)
-        commercial_premise_gmaps_url = element.get("current_url", "")
+        commercial_premise_gmaps_url = element.get("current_url", element.get("extractor_url"))
         address_hash = hashlib.sha256(address.encode()).hexdigest() if address else None
         updatable_id = element.get("commercial_premise_id") if is_update else None
         inserted = False
