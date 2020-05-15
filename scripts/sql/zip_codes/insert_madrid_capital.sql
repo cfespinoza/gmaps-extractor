@@ -54,4 +54,4 @@ INSERT INTO zip_code_info (zip_code,gmaps_url,gmaps_coordinates,country) VALUES
 ('28005','https://www.google.com/maps/place/28005+Madrid/@40.4054909,-3.7288963,14z','@40.4054909,-3.7288963,14z','Spain'),
 ('28006','https://www.google.com/maps/place/28006+Madrid/@40.4411371,-3.6978262,14z','@40.4411371,-3.6978262,14z','Spain'),
 ('28007','https://www.google.com/maps/place/28007+Madrid/@40.4078905,-3.6927764,14z','@40.4078905,-3.6927764,14z','Spain'),
-('28008','https://www.google.com/maps/place/28008+Madrid/@40.4270629,-3.7423166,14z','@40.4270629,-3.7423166,14z','Spain'),
+('28008','https://www.google.com/maps/place/28008+Madrid/@40.4270629,-3.7423166,14z','@40.4270629,-3.7423166,14z','Spain');

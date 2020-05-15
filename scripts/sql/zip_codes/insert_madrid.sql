@@ -290,4 +290,4 @@ INSERT INTO zip_code_info (zip_code,gmaps_url,gmaps_coordinates,country) VALUES
 ('28190','https://www.google.com/maps/place/28190+Puebla+de+la+Sierra,+Madrid/@41.0894541,-3.5880964,11z','@41.0894541,-3.5880964,11z','Spain'),
 ('28191','https://www.google.com/maps/place/28191+Pr%C3%A1dena+del+Rinc%C3%B3n,+Madrid/@41.073627,-3.5648018,12z','@41.073627,-3.5648018,12z','Spain'),
 ('28194','https://www.google.com/maps/place/28194+Robledillo+de+la+Jara,+Madrid/@40.9576381,-3.5598217,13z','@40.9576381,-3.5598217,13z','Spain'),
-('28210','https://www.google.com/maps/place/28210+Valdemorillo,+Madrid/@40.5067153,-4.1322196,12z','@40.5067153,-4.1322196,12z','Spain'),
+('28210','https://www.google.com/maps/place/28210+Valdemorillo,+Madrid/@40.5067153,-4.1322196,12z','@40.5067153,-4.1322196,12z','Spain');
