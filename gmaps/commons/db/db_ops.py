@@ -39,6 +39,7 @@ sql_comments = """
         reviews_by_author VARCHAR (600),
         content TEXT,
         raw_content TEXT,
+        hash_commercial_premise VARCHAR(600),
         PRIMARY KEY(id),
         date DATE NOT NULL,
         FOREIGN KEY (commercial_premise_id)
