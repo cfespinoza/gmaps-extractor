@@ -19,7 +19,7 @@ sql_main_table = """
         type VARCHAR(600),
         score FLOAT DEFAULT 0.0,
         total_scores INTEGER DEFAULT 0,
-        price_range VARCHAR(5),
+        price_range VARCHAR(200),
         style VARCHAR(600),
         address VARCHAR(600),
         date DATE NOT NULL,
