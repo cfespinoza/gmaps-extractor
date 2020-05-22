@@ -177,6 +177,8 @@ class PlacesExtractor(AbstractGMapsExtractor):
         self._thread_local = threading.local()
         self._thread_driver_id = "{classname}_{place}_driver".format(classname=self.__class__.__name__,
                                                                      place=self._place_name)
+        self._retries = 0
+        self._max_retries = 3
         self._postal_code = postal_code
         self._extraction_date = extraction_date
         self._output_config = output_config
@@ -472,27 +474,32 @@ class PlacesExtractor(AbstractGMapsExtractor):
             # se ha detectado un error tratando de acceder a algún elemento del DOM de la página y se vuelve a intentar
             # extraer la información sin volver a procesar ninguna URL. Llamada recursiva a _scrap
             self.logger.error(str(sere))
-            self.logger.warning("-{place}-: problems accessing to reviews from ambiguous results: -{url}-".format(
+            self.logger.warning("-{place}-: StaleElementReferenceException detected: accessing to ambiguous results: -{url}-".format(
                 place=self._place_name, url=driver.current_url))
-            self.logger.warning(
-                "-{place}-: trying to look up reviews again; StaleElementReferenceException detected".format(
-                    place=self._place_name))
-            place_info = self._force_scrap(driver)
+            if self._retries < self._max_retries:
+                self._retries += 1
+                place_info = self._force_scrap(driver)
+            else:
+                self.logger.warning("-{place}-: aborting retrying to force scraping due to max retries reached".format(
+                        place=self._place_name))
         except TimeoutException as te:
             # se ha detectado de timeout esprando a que la página termine de cargar y se vuelve a intentar a
             # extraer la información sin volver a procesar ninguna URL. Llamada recursiva a _scrap
             self.logger.error(str(te))
-            self.logger.warning("-{place}-: problems accessing to reviews from ambiguous results: -{url}-".format(
+            self.logger.warning("-{place}-: TimeoutException detected: accessing to ambiguous results: -{url}-".format(
                 place=self._place_name, url=driver.current_url))
-            self.logger.warning("-{place}-: trying to look up reviews again; TimeoutException detected.")
-            place_info = self._force_scrap(driver)
+            if self._retries < self._max_retries:
+                self._retries += 1
+                place_info = self._force_scrap(driver)
+            else:
+                self.logger.warning("-{place}-: aborting retrying to force scraping due to max retries reached".format(
+                        place=self._place_name))
         except Exception as e:
             # error no controlado durante la extracción de la información. Se sale de la ejecución sin forzar la
             # extracción de la información
             self.logger.error(str(e))
-            self.logger.warning("-{place}-: problems accessing to reviews from ambiguous results: -{url}-".format(
+            self.logger.warning("-{place}-: uncaught Exception detected: accesing to ambiguous results: -{url}-".format(
                 place=self._place_name, url=driver.current_url))
-            self.logger.warning("-{place}-: trying to look up reviews again; uncaught Exception detected.")
         finally:
             return place_info
 
