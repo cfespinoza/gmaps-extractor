@@ -318,10 +318,13 @@ usage: gmaps-db -c <db_operation_config>
 optional arguments:
   -h, --help            show this help message and exit
   -c [CONFIG_FILE], --config_file [CONFIG_FILE]
-                        path to configuration file in json format that with the following schema
-                        following format: { "db_name":"gmaps",
-                        "host":"localhost", "user":"root", "passwd":"1234",
-                        "operation": "reset"}
+                        path to configuration file in json format that with
+                        the following schema: { "db_name":"gmaps",
+                        "host":"localhost", "user":"root", "passwd":"1234" }
+  -o [OPERATION], --operation [OPERATION]
+                        operation to be performed.
+                        supported_ops = ["reset-all", "init", "drop", "reset-results", "reset-executions"]
+
 ```
 
 Como se puede ver, este programa espera como argumento la ubicación de un fichero de configuración en formato `json`. 
@@ -329,11 +332,10 @@ Este fichero tiene que seguir el siguiente esquema:
 
 ```json
 { 
+  "host": "string",
   "db_name": "string",
-  "host": "string", 
-  "user": "string", 
-  "passwd": "string",
-  "operation": "string"
+  "user": "string",
+  "passwd": "string"
 }
 ```
 
@@ -345,14 +347,15 @@ Donde cada campo se define en la siguienta tabla:
 |host       |string| ip o fqnd de la base de datos a la que el programa se conectará para crear la base de datos | - | "localhost"
 |user       |string| usuario con el que el programa se conectará a la base de datos | - | "postgres"
 |passwd     |string| contraseña para autenticarse a la base de datos | - | "mysecretpassword"
-|operation  |string| operación a ejecutar | "reset", "init", "drop" | "init"
 
 Tipo de `operation`:
 
  - `init`: creará la base de datos con el nombre que se le haya establecido en el campo `db_name` en el json de configuración
  y creará las tablas necesarias para las ejecuciones y las que contendrán los resultados.
- - `reset`: esta operación borrará todas las tablas y las volverá a crear.
  - `drop`: borrará todas las tablas sin crearlas de nuevo.
+ - `reset-results`: esta operación borrará todas las tablas y las volverá a crear.
+ - `reset-executions`: esta operación borrará todas las tablas y las volverá a crear.
+ - `reset-all`: esta operación borrará todas las tablas y las volverá a crear.
 
 Descripción de cada tabla:
 
@@ -368,6 +371,8 @@ Descripción de cada tabla:
  de la información para todo el contenido de la tabla, esto último hay que tenerlo en cuenta si queremos cambiar los 
  códigos postales de una ejecución a otra, en este caso es necesario el borrado de la tabla y la insercción de los 
  códigos postales nuevos.
+ - `premise_type_info`: tabla para almacenar los tipos de locales. Se le hace referencia desde la tabla `execution_info`
+ 
 
 Ejemplo de json de configuración para la creación de la base de datos *gmaps* y las tablas. Contenido en el fichero 
 `$(pwd)/resources/db_ops_config.json`:
@@ -377,8 +382,7 @@ Ejemplo de json de configuración para la creación de la base de datos *gmaps* 
   "host": "localhost",
   "db_name": "gmaps",
   "user": "postgres",
-  "passwd": "mysecretpassword",
-  "operation": "init"
+  "passwd": "mysecretpassword"
 }
 ```
 
@@ -386,7 +390,7 @@ Ejemplo de ejecución de `gmaps-db` suponiendo que el fichero de configuración 
 proyecto:
 
 ```shell script
-gmaps-db -c $(pwd)/resources/db_ops_config.json
+gmaps-db -c $(pwd)/resources/db_ops_config.json -o init
 ```
 
 #### · gmaps-url-scrapper
@@ -677,7 +681,9 @@ Donde cada campo se define en la siguienta tabla:
 | Nombre    | Tipo | Descripción | Opciones | Ejemplo |
 |:--------- |:----:|-------------|:--------:|:-------:|
 | driver_path | string  | ubicación del driver de chrome que usará selenium para hacer el scraping | - | /home/gmaps-extractor/resources/chromedriver | 
-| executors | integer | número de procesos que correrán en paralelo. Número recomendado: cores-2 | - | 5 |
+| executors | integer | número de procesos que correrán en paralelo | - | 5 |
+| place_executors | integer | número de procesos que correrán en paralelo para la extracción de cada local | - | 5 |
+| recovery_executors | integer | número de procesos que correrán en paralelo para la recuperación de posibles locales perdidos | - | 5 |
 | log_level | string  | nivel de log | INFO, DEBUG, CRITICAL, ERROR | INFO |
 | log_dir | string  | directorio donde se almacenará el fichero de logs de la ejecución | - | /home/gmaps-extractor/results |
 | results_pages | integer | número de páginas de resultados de búsqueda de las que se extraerá la información | - | 10 |
@@ -794,6 +800,8 @@ de postgres. Suponiendo que el siguiente contenido es del fichero `$(pwd)/resour
 {
   "driver_path": "/home/gmaps-extractor/resources/chromedriver",
   "executors": 20,
+  "place_executors": 5,
+  "recovery_executors": 15,
   "log_level": "INFO",
   "log_dir": "/home/gmaps-extractor/results",
   "results_pages": 10,

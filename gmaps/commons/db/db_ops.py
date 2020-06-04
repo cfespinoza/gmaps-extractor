@@ -26,6 +26,8 @@ sql_main_table = """
         execution_places_types VARCHAR(600), 
         commercial_premise_gmaps_url VARCHAR(600),
         hash_commercial_premise VARCHAR(600),
+        lat VARCHAR(100),
+        long VARCHAR(100),
         PRIMARY KEY(ID)
     )
 """
@@ -262,15 +264,14 @@ def get_parser():
     """
     parser = argparse.ArgumentParser(
         prog='gmaps-db',
-        usage='gmaps-db -c <db_operation_config>')
+        usage='gmaps-db -c <db_operation_config> -o <operation>')
     parser.add_argument('-c', '--config_file', nargs="?", help='''
     path to configuration file in json format that with the following schema:
         {
             "db_name":"gmaps",
             "host":"localhost",
             "user":"root",
-            "passwd":"1234",
-            "operation": "reset"
+            "passwd":"1234"
         } 
     ''', required=True)
     parser.add_argument('-o', '--operation', nargs="?", help='''operation to be performed''')

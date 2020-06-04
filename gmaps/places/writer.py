@@ -78,8 +78,10 @@ class PlaceDbWriter(DbWriter):
                         date, 
                         execution_places_types, 
                         commercial_premise_gmaps_url, 
-                        hash_commercial_premise) 
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) 
+                        hash_commercial_premise,
+                        lat,
+                        long) 
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) 
                     RETURNING id;
                     """
         self._update_commercial_premise_query = """
@@ -98,7 +100,9 @@ class PlaceDbWriter(DbWriter):
                                 date = %s,
                                 execution_places_types = %s,
                                 commercial_premise_gmaps_url = %s,
-                                hash_commercial_premise = %s
+                                hash_commercial_premise = %s,
+                                lat = %s,
+                                long = %s
                             WHERE id = %s
                             RETURNING id;
                             """
@@ -229,6 +233,9 @@ class PlaceDbWriter(DbWriter):
         commercial_premise_gmaps_url = element.get("current_url", element.get("extractor_url"))
         address_hash = hashlib.sha256(address.encode()).hexdigest() if address else None
         updatable_id = element.get("commercial_premise_id") if is_update else None
+        gps_coords = commercial_premise_gmaps_url.split("!3d")[-1].split("!4d") if "/place/" in commercial_premise_gmaps_url else None
+        lat = str(gps_coords[0]).replace(".", ",") if gps_coords is not None else None
+        long = str(gps_coords[1]).replace(".", ",") if gps_coords is not None else None
         inserted = False
         try:
             cursor.execute(self._find_place_query, (name, date, address))
@@ -246,11 +253,11 @@ class PlaceDbWriter(DbWriter):
                 values = (
                     name, zip_code, coordinates, telephone, opening_hours, premise_type, score, total_score,
                     price_range, style, address, date, execution_places_types, commercial_premise_gmaps_url,
-                    address_hash, updatable_id
+                    address_hash, lat, long, updatable_id
                 ) if is_update else (
                     name, zip_code, coordinates, telephone, opening_hours, premise_type, score, total_score,
                     price_range, style, address, date, execution_places_types, commercial_premise_gmaps_url,
-                    address_hash
+                    address_hash, lat, long
                 )
                 query = self._update_commercial_premise_query if is_update else self._commercial_premise_query
                 try:
