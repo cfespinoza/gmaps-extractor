@@ -231,7 +231,7 @@ class PlaceDbWriter(DbWriter):
         total_score = int(element.get("total_scores").replace(",", "").replace(".", "")) if element.get("total_scores") else None
         execution_places_types = element.get("execution_places_types", None)
         commercial_premise_gmaps_url = element.get("current_url", element.get("extractor_url"))
-        address_hash = hashlib.sha256(address.encode()).hexdigest() if address else None
+        address_hash = hashlib.sha256((name+address).encode()).hexdigest() if address and name else None
         updatable_id = element.get("commercial_premise_id") if is_update else None
         gps_coords = commercial_premise_gmaps_url.split("!3d")[-1].split("!4d") if "/place/" in commercial_premise_gmaps_url else None
         lat = str(gps_coords[0]).replace(".", ",") if gps_coords is not None else None
