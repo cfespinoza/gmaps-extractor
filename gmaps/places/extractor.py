@@ -154,8 +154,8 @@ class PlacesExtractor(AbstractGMapsExtractor):
             "6": "sabado",
             "*6": "sabado"
         }
-        self._coords_xpath_selector = "//*[@id='pane']/div/div[1]/div/div//button[@jsaction='pane.wfvdle29;clickmod:pane.wfvdle29;focus:pane.focusTooltip;blur:pane.blurTooltip']//div[@class='ugiz4pqJLAG__primary-text gm2-body-2']"
-        self._telephone_xpath_selector = "//*[@id='pane']/div/div[1]/div/div//button[@jsaction='pane.wfvdle32;clickmod:pane.wfvdle32;focus:pane.focusTooltip;blur:pane.blurTooltip']//div[@class='ugiz4pqJLAG__primary-text gm2-body-2']"
+        self._coords_xpath_selector = "//*[@id='pane']/div/div[1]/div/div/div[10]/button/div/div[2]/div[1]"
+        self._telephone_xpath_selector = "//*[@id='pane']/div/div[1]/div/div/div[12]/button/div/div[2]/div[1]"
         self._openning_hours_xpath_selector = "//*[@id='pane']/div/div[1]/div/div/div[@class='cX2WmPgCkHi__root gm2-body-2 cX2WmPgCkHi__dense']/div[@class='section-open-hours-container cX2WmPgCkHi__container-hoverable']"
         self._openning_hours_xpath_selector_aux = "//*[@id='pane']/div/div[1]/div/div/div[@class='cX2WmPgCkHi__root gm2-body-2 cX2WmPgCkHi__has-special-hours cX2WmPgCkHi__dense']/div[@class='section-open-hours-container cX2WmPgCkHi__container-hoverable']"
         self._back_button_xpath = "//*[@id='pane']/div/div/div[@class='widget-pane-content-holder']/div/button"
