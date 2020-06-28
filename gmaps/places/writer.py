@@ -5,8 +5,11 @@ import os
 
 import psycopg2
 from psycopg2._psycopg import IntegrityError
+from sqlalchemy.orm import sessionmaker
 
 from gmaps.commons.writer.writer import DbWriter, FileWriter
+from gmaps.orm import orm
+from gmaps.orm.orm import CommercialPremise, CommercialPremiseInfo, ExecutionResult, Comment, Occupation
 
 
 class PlaceDbWriter(DbWriter):
@@ -49,7 +52,7 @@ class PlaceDbWriter(DbWriter):
         escribe la información de element en la base de datos, en las distintas tablas
     """
 
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, db_engine_config=None):
         """Constructor de la clase
 
         Arguments
@@ -62,6 +65,9 @@ class PlaceDbWriter(DbWriter):
         self.db_name = config.get("database")
         self.logger = logging.getLogger(self.__class__.__name__)
         self.db = None
+        self.db_engine = None
+        self.db_engine_config = db_engine_config
+        self.session_factory = None
         self._commercial_premise_query = """
                     INSERT INTO commercial_premise 
                         (name, 
@@ -136,16 +142,21 @@ class PlaceDbWriter(DbWriter):
 
     def auto_boot(self):
         """Función encargada de abrir la conexión a la base de datos."""
-        self.db = psycopg2.connect(
-            host=self.host,
-            user=self.db_user,
-            password=self.db_pass,
-            database=self.db_name
-        )
+        if self.db_engine_config:
+            self.db_engine = orm.get_engine(self.db_engine_config)
+            self.session_factory = sessionmaker(bind=self.db_engine)
+        else:
+            self.db = psycopg2.connect(
+                host=self.host,
+                user=self.db_user,
+                password=self.db_pass,
+                database=self.db_name
+            )
 
     def finish(self):
         """Función encargada de cerrar la conexión a la base de datos."""
-        self.db.close()
+        if self.db:
+            self.db.close()
 
     def decompose_occupancy_data(self, occupancy_levels):
         """Función auxiliar para la construcción del objeto de ocupación por horas para registrarlo en la base de datos.
@@ -175,25 +186,17 @@ class PlaceDbWriter(DbWriter):
     def is_registered(self, data):
         """Ejecuta la query para comprobar si el local comercial ha sido registrado para la fecha pasada por argumento.
         """
+        session = self.session_factory()
         name = data.get("name", "")
-        date = data.get("date", "")
         address = "{prefix_address}%".format(prefix_address=data.get("address", ""))
-        cursor = self.db.cursor()
-        is_registered = False
-        try:
-            cursor.execute(self._find_place_query, (name, date, address))
-            db_element = cursor.fetchone()
-            if db_element and len(db_element):
-                is_registered = True
-            else:
-                is_registered = False
-        except Exception as e:
-            self.logger.error("-{place}-: error checking if place is already registered for address"
-                              " -{address} and date -{date}-".format(place=name, date=date, address=address))
-            self.logger.error(str(e))
-        finally:
-            cursor.close()
-            return is_registered
+        commercial_premise = session.query(CommercialPremise) \
+            .filter(CommercialPremise.name.ilike(name)) \
+            .filter(CommercialPremise.full_address.ilike(address)).first()
+        in_execution = session.query(ExecutionResult) \
+            .filter(ExecutionResult.execution_id == data.get("execution_id")) \
+            .filter(ExecutionResult.commercial_premise_id == commercial_premise.id).first()
+        is_registered = in_execution is not None
+        return is_registered
 
     def write(self, element, is_update=False):
         """Escribe la información de element en la base de datos, en las distintas tablas.
@@ -213,124 +216,189 @@ class PlaceDbWriter(DbWriter):
         False
             si no se ha insertado.
         """
-        cursor = self.db.cursor()
-        # Store element
-        op_values = element.get("opening_hours")[0] if len(element.get("opening_hours", [])) == 1 else element.get(
-            "opening_hours", [])
-        name = element.get("name", None)
-        zip_code = element.get("zip_code", None)  # external added to element in extraction process
-        date = element.get("date", None)  # external added to element in extraction process
-        address = element.get("address", None)
-        price_range = element.get("price_range", None)  # to extract
-        style = element.get("style", None)  # to extract
-        premise_type = element.get("premise_type", None)  # to extract
-        coordinates = element.get("coordinates", None)
-        telephone = element.get("telephone_number", None)
-        opening_hours = ",".join(op_values) if op_values else None
-        score = float(element.get("score").replace(",", ".")) if element.get("score") else None
-        total_score = int(element.get("total_scores").replace(",", "").replace(".", "")) if element.get("total_scores") else None
-        execution_places_types = element.get("execution_places_types", None)
-        commercial_premise_gmaps_url = element.get("current_url", element.get("extractor_url"))
-        address_hash = hashlib.sha256((name+address).encode()).hexdigest() if address and name else None
-        updatable_id = element.get("commercial_premise_id") if is_update else None
-        gps_coords = commercial_premise_gmaps_url.split("!3d")[-1].split("!4d") if "/place/" in commercial_premise_gmaps_url else None
-        lat = str(gps_coords[0]).replace(".", ",") if gps_coords is not None else None
-        long = str(gps_coords[1]).replace(".", ",") if gps_coords is not None else None
-        inserted = False
-        try:
-            cursor.execute(self._find_place_query, (name, date, address))
-            db_element = cursor.fetchone()
-            element_id = None
-            if db_element and not is_update:
-                # si el local comercial ya existe en la base de datos para la fecha de ejecución, se marca como
-                # insertado: `inserted = True`
-                self.logger.info("-{place}-: commercial premise found in database".format(place=name))
-                inserted = True
-            else:
-                # si no está, se inserta primero en la tabla `commercial_premise` y se obtiene el id para el local
-                # insertado. Este id (`element_id`) se usará para hacer las insercciones en las tablas de
-                # `commercial_premise_comments` y `commercial_premise_occupation`
-                values = (
-                    name, zip_code, coordinates, telephone, opening_hours, premise_type, score, total_score,
-                    price_range, style, address, date, execution_places_types, commercial_premise_gmaps_url,
-                    address_hash, lat, long, updatable_id
-                ) if is_update else (
-                    name, zip_code, coordinates, telephone, opening_hours, premise_type, score, total_score,
-                    price_range, style, address, date, execution_places_types, commercial_premise_gmaps_url,
-                    address_hash, lat, long
-                )
-                query = self._update_commercial_premise_query if is_update else self._commercial_premise_query
-                try:
-                    self.logger.info("-{place}-: storing commercial premise in database".format(place=name))
-                    cursor.execute(query, values)
-                    element_id = cursor.fetchone()
-                    self.db.commit()
-                except IntegrityError as ie:
-                    self.db.rollback()
-                    self.logger.error("-{place}-: integrity error while storing commercial premise".format(place=name))
-                    if is_update:
-                        self.logger.error("-{place}-: integrity error detected in recovery process".format(place=name))
-                        self.logger.error("-{place}-: deleting commercial premise with id: {id}".format(
-                            place=name, id=updatable_id))
-                        cursor.execute(self._delete_place_query, (updatable_id,))
-                        self.db.commit()
-                    raise ie
-                except Exception as e:
-                    self.db.rollback()
-                    self.logger.error("-{place}-: error storing commercial premise".format(place=name))
-                    if is_update:
-                        print(e)
-                    self.logger.error(str(e))
-                    self.logger.error("-{place}-: wrong value: {values}".format(place=name, values=values))
-                    raise Exception(
-                        "-{place}-: avoid registration: commercial premise with name with wrong values".format(
-                            place=name))
-                # Store comments
-                # (commercial_premise_id, author, publish_date, reviews_by_author, content, raw_content, date)
-                values = [(element_id[0],
-                           comment.get("author", ""),
-                           comment.get("publish_date", ""),
-                           comment.get("reviews_by_author", ""),
-                           comment.get("content", ""),
-                           comment.get("raw_content", ""),
-                           date,
-                           address_hash) for comment in element.get("comments", [])]
-                self.logger.info("-{place}-: storing commercial premise comments in database".format(place=name))
-                try:
-                    cursor.executemany(self._commercial_premise_comments_query, values)
-                    self.db.commit()
-                except Exception as e:
-                    self.db.rollback()
-                    self.logger.error("-{place}-: error during storing comments".format(place=name))
-                    self.logger.error(str(e))
-                    self.logger.error("-{place}-: wrong values:".format(place=name))
-                    self.logger.error(values)
-                # Store occupancy data
-                if element.get("occupancy"):
-                    values = []
-                    self.logger.info("-{place}-: storing commercial premise occupancy in database".format(place=name))
-                    for week_day, content in self.decompose_occupancy_data(element["occupancy"]).items():
-                        if content and content.items():
-                            values += [(element_id, week_day, key, value, date, address_hash) for key, value in content.items()]
+        if self.db_engine:
+            self.orm_write(element)
+        else:
+            cursor = self.db.cursor()
+            # Store element
+            op_values = element.get("opening_hours")[0] if len(element.get("opening_hours", [])) == 1 else element.get(
+                "opening_hours", [])
+            name = element.get("name", None)
+            zip_code = element.get("zip_code", None)  # external added to element in extraction process
+            date = element.get("date", None)  # external added to element in extraction process
+            address = element.get("address", None)
+            price_range = element.get("price_range", None)  # to extract
+            style = element.get("style", None)  # to extract
+            premise_type = element.get("premise_type", None)  # to extract
+            coordinates = element.get("coordinates", None)
+            telephone = element.get("telephone_number", None)
+            opening_hours = ",".join(op_values) if op_values else None
+            score = float(element.get("score").replace(",", ".")) if element.get("score") else None
+            total_score = int(element.get("total_scores").replace(",", "").replace(".", "")) if element.get(
+                "total_scores") else None
+            execution_places_types = element.get("execution_places_types", None)
+            commercial_premise_gmaps_url = element.get("current_url", element.get("extractor_url"))
+            address_hash = hashlib.sha256((name + address).encode()).hexdigest() if address and name else None
+            updatable_id = element.get("commercial_premise_id") if is_update else None
+            gps_coords = commercial_premise_gmaps_url.split("!3d")[-1].split(
+                "!4d") if "/place/" in commercial_premise_gmaps_url else None
+            lat = str(gps_coords[0]).replace(".", ",") if gps_coords is not None else None
+            long = str(gps_coords[1]).replace(".", ",") if gps_coords is not None else None
+            inserted = False
+            try:
+                cursor.execute(self._find_place_query, (name, date, address))
+                db_element = cursor.fetchone()
+                element_id = None
+                if db_element and not is_update:
+                    # si el local comercial ya existe en la base de datos para la fecha de ejecución, se marca como
+                    # insertado: `inserted = True`
+                    self.logger.info("-{place}-: commercial premise found in database".format(place=name))
+                    inserted = True
+                else:
+                    # si no está, se inserta primero en la tabla `commercial_premise` y se obtiene el id para el local
+                    # insertado. Este id (`element_id`) se usará para hacer las insercciones en las tablas de
+                    # `commercial_premise_comments` y `commercial_premise_occupation`
+                    values = (
+                        name, zip_code, coordinates, telephone, opening_hours, premise_type, score, total_score,
+                        price_range, style, address, date, execution_places_types, commercial_premise_gmaps_url,
+                        address_hash, lat, long, updatable_id
+                    ) if is_update else (
+                        name, zip_code, coordinates, telephone, opening_hours, premise_type, score, total_score,
+                        price_range, style, address, date, execution_places_types, commercial_premise_gmaps_url,
+                        address_hash, lat, long
+                    )
+                    query = self._update_commercial_premise_query if is_update else self._commercial_premise_query
                     try:
-                        cursor.executemany(self._commercial_premise_occupation_query, values)
+                        self.logger.info("-{place}-: storing commercial premise in database".format(place=name))
+                        cursor.execute(query, values)
+                        element_id = cursor.fetchone()
+                        self.db.commit()
+                    except IntegrityError as ie:
+                        self.db.rollback()
+                        self.logger.error(
+                            "-{place}-: integrity error while storing commercial premise".format(place=name))
+                        if is_update:
+                            self.logger.error(
+                                "-{place}-: integrity error detected in recovery process".format(place=name))
+                            self.logger.error("-{place}-: deleting commercial premise with id: {id}".format(
+                                place=name, id=updatable_id))
+                            cursor.execute(self._delete_place_query, (updatable_id,))
+                            self.db.commit()
+                        raise ie
+                    except Exception as e:
+                        self.db.rollback()
+                        self.logger.error("-{place}-: error storing commercial premise".format(place=name))
+                        if is_update:
+                            print(e)
+                        self.logger.error(str(e))
+                        self.logger.error("-{place}-: wrong value: {values}".format(place=name, values=values))
+                        raise Exception(
+                            "-{place}-: avoid registration: commercial premise with name with wrong values".format(
+                                place=name))
+                    # Store comments
+                    # (commercial_premise_id, author, publish_date, reviews_by_author, content, raw_content, date)
+                    values = [(element_id[0],
+                               comment.get("author", ""),
+                               comment.get("publish_date", ""),
+                               comment.get("reviews_by_author", ""),
+                               comment.get("content", ""),
+                               comment.get("raw_content", ""),
+                               date,
+                               address_hash) for comment in element.get("comments", [])]
+                    self.logger.info("-{place}-: storing commercial premise comments in database".format(place=name))
+                    try:
+                        cursor.executemany(self._commercial_premise_comments_query, values)
                         self.db.commit()
                     except Exception as e:
                         self.db.rollback()
-                        self.logger.error("-{place}-: error during storing occupancy".format(place=name))
+                        self.logger.error("-{place}-: error during storing comments".format(place=name))
                         self.logger.error(str(e))
                         self.logger.error("-{place}-: wrong values:".format(place=name))
                         self.logger.error(values)
-                inserted = True
-        except Exception as e:
-            self.db.rollback()
-            self.logger.error("-{place}-: error during writing data for place".format(place=name))
-            self.logger.error(str(e))
-            self.logger.error("-{place}-: wrong values:".format(place=name))
-            self.logger.error(json.dumps(element))
-        finally:
-            cursor.close()
-            return inserted
+                    # Store occupancy data
+                    if element.get("occupancy"):
+                        values = []
+                        self.logger.info(
+                            "-{place}-: storing commercial premise occupancy in database".format(place=name))
+                        for week_day, content in self.decompose_occupancy_data(element["occupancy"]).items():
+                            if content and content.items():
+                                values += [(element_id, week_day, key, value, date, address_hash) for key, value in
+                                           content.items()]
+                        try:
+                            cursor.executemany(self._commercial_premise_occupation_query, values)
+                            self.db.commit()
+                        except Exception as e:
+                            self.db.rollback()
+                            self.logger.error("-{place}-: error during storing occupancy".format(place=name))
+                            self.logger.error(str(e))
+                            self.logger.error("-{place}-: wrong values:".format(place=name))
+                            self.logger.error(values)
+                    inserted = True
+            except Exception as e:
+                self.db.rollback()
+                self.logger.error("-{place}-: error during writing data for place".format(place=name))
+                self.logger.error(str(e))
+                self.logger.error("-{place}-: wrong values:".format(place=name))
+                self.logger.error(json.dumps(element))
+            finally:
+                cursor.close()
+                return inserted
+
+    def orm_write(self, element):
+        session = self.session_factory()
+
+        # registering or recover commercial permise
+        commercial_premise = CommercialPremise(from_json=element)
+        db_commercial_premise = session.query(CommercialPremise) \
+            .filter(CommercialPremise.name.ilike(commercial_premise.name)) \
+            .filter(CommercialPremise.full_address.ilike("{}%".format(commercial_premise.full_address))).first()
+        commercial_premise_id = None
+        if db_commercial_premise:
+            commercial_premise_id = db_commercial_premise.id
+            self.logger.debug("commercial premise found in database: {id} - {name}".format(id=db_commercial_premise.id,
+                                                                                           name=db_commercial_premise.name))
+        else:
+            session.add(commercial_premise)
+            commercial_premise_id = commercial_premise.id
+            session.commit()
+
+        # registering execution and commercial premise relation
+        execution_result = ExecutionResult(execution_id=element.get("execution_id"),
+                                           commercial_premise_id=commercial_premise_id)
+        session.add(execution_result)
+        session.commit()
+
+        # inserting commercial permise info
+        commercial_premise_info = CommercialPremiseInfo(from_json=element, commercial_premise_id=commercial_premise_id)
+        session.add(commercial_premise_info)
+        session.commit()
+
+        # inserting comments
+        comments = [Comment(**{
+            "commercial_premise_id": commercial_premise_id,
+            "execution_id": element.get("execution_id"),
+            "author": comment.get("author"),
+            "publish_date": comment.get("publish_date"),
+            "reviews_by_author": comment.get("reviews_by_author"),
+            "content": comment.get("content", ""),
+            "raw_content": comment.get("raw_content", "")}) for comment in element.get("comments", [])]
+
+        session.add_all(comments)
+        session.commit()
+
+        # inserting occupancy
+        if element.get("occupancy"):
+            values = []
+            for week_day, content in self.decompose_occupancy_data(element["occupancy"]).items():
+                if content and content.items():
+                    values += [Occupation(**{"commercial_premise_id": commercial_premise_id,
+                                             "execution_id": element.get("execution_id"),
+                                             "week_day": week_day,
+                                             "time_period": key,
+                                             "occupation": value}) for key, value in content.items()]
+            session.add_all(values)
+            session.commit()
+        return True
 
 
 class PlaceFileWriter(FileWriter):
@@ -411,4 +479,3 @@ class PlaceFileWriter(FileWriter):
             self.logger.error("there are errors trying to write the following element: ")
             self.logger.error(element)
             return False
-

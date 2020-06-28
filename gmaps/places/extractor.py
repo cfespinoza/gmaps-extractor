@@ -10,6 +10,7 @@ from gmaps.commons.extractor.extractor import AbstractGMapsExtractor
 from selenium.webdriver.support import expected_conditions as ec
 
 from gmaps.commons.writer.writer import PrinterWriter
+from gmaps.orm import orm
 from gmaps.places.writer import PlaceDbWriter, PlaceFileWriter
 
 
@@ -110,7 +111,7 @@ class PlacesExtractor(AbstractGMapsExtractor):
     """
 
     def __init__(self, driver_location=None, url=None, place_address=None, place_name=None, num_reviews=None,
-                 output_config=None, postal_code=None, places_types=None, extraction_date=None):
+                 output_config=None, postal_code=None, places_types=None, extraction_date=None, execution_id=None):
         """Constructor de la clase
 
         Parameters
@@ -183,9 +184,10 @@ class PlacesExtractor(AbstractGMapsExtractor):
         self._extraction_date = extraction_date
         self._output_config = output_config
         self._places_types = "+".join(places_types)
+        self._execution_id = execution_id
         self.auto_boot()
 
-    def _boot_writer(self):
+    def __boot_writer(self):
         """Arranca y configura el writer que corresponda dependiendo del soporte de salida que se haya configurado para
         la ejecución del programa.
         """
@@ -227,6 +229,10 @@ class PlacesExtractor(AbstractGMapsExtractor):
                                   .format(required=required_keys, place=self._place_name))
         else:
             self.logger.error("-{place}-: writer type is not supported")
+
+    def _boot_writer(self):
+        self._writer = PlaceDbWriter(config={}, db_engine_config=self._output_config)
+        self._writer.auto_boot()
 
     def boot_writer(self):
         """Función que arrancaba y configuraba el writer de este extractor leyendo de la configuración del soporte de
@@ -355,7 +361,8 @@ class PlacesExtractor(AbstractGMapsExtractor):
             "style": style,
             "premise_type": premise_type,
             "extractor_url": self._url,
-            "current_url": driver.current_url
+            "current_url": driver.current_url,
+            "execution_id": self._execution_id
         }
         self.logger.info("-{place}-: info retrieved for place".format(place=self._place_name))
         return place_info
@@ -448,7 +455,8 @@ class PlacesExtractor(AbstractGMapsExtractor):
             "date": self._extraction_date,
             "address": self._place_address,
             "execution_places_types": self._places_types,
-            "extractor_url": self._url
+            "extractor_url": self._url,
+            "execution_id": self._execution_id
         }
         try:
             self.force_sleep(self.sleep_xs)
@@ -536,7 +544,7 @@ class PlacesExtractor(AbstractGMapsExtractor):
             # checkeo si ya existe registro para la fecha de extracción y el nombre del local para evitar volver a
             # procesarlo
             is_registered = self._writer.is_registered({"name": self._place_name, "date": self._extraction_date,
-                                                        "address": self._place_address})
+                                                        "address": self._place_address, "execution_id": self._execution_id})
             if is_registered:
                 self.logger.warning("-{name}-: place in {address} and for date: -{date}- is already processed".format(
                     name=self._place_name, date=self._extraction_date, address=self._place_address))
