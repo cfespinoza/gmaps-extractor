@@ -344,6 +344,7 @@ class PlacesExtractor(AbstractGMapsExtractor):
 
         """
         driver = provided_driver if provided_driver else self.get_driver()
+        elements = self._get_elements_match(provided_driver=driver)
         # extract basic info
         name_obj = self.get_obj_text(xpath_query=self._place_name_xpath, external_driver=driver)
         name_val = name_obj if name_obj else self._place_name
@@ -370,7 +371,6 @@ class PlacesExtractor(AbstractGMapsExtractor):
         #     .format(name=self._place_name, date=self._extraction_date, addr=address_obj))
         # else:
         #     comments_list = self._get_comments(self._place_name, self.sleep_m, external_driver=driver)
-        elements = self._get_elements_match(provided_driver=driver)
         place_info = {
             "name": name_val,
             "score": score_obj,
