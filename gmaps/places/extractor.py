@@ -4,6 +4,7 @@ import time
 
 import selenium
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException
+from selenium.webdriver.common.by import By
 
 from gmaps.commons.commons import validate_required_keys
 from gmaps.commons.extractor.extractor import AbstractGMapsExtractor
@@ -302,6 +303,31 @@ class PlacesExtractor(AbstractGMapsExtractor):
                                                                                                url=self._url))
         return occupancy_obj
 
+    def _get_elements_match(self, provided_driver=None):
+        driver = provided_driver if provided_driver else self.get_driver()
+        xpath_query = "//*[@id='pane']/div/div[1]/div/div//button//div[@class='ugiz4pqJLAG__primary-text gm2-body-2']"
+        driver.wait.until(
+            ec.visibility_of_all_elements_located((By.XPATH, xpath_query)))
+        likely_match = driver.find_elements_by_xpath(xpath_query)
+        elements = {}
+        self.logger.info("-{place}-: likely match found: {found}".format(place=self._place_name, found=len(likely_match)))
+        if len(likely_match) > 1:
+            elements["address"] = likely_match[0].text
+        if len(likely_match) > 2:
+            elements["coordinates"] = likely_match[1].text
+        if len(likely_match) > 3:
+            if '.' in likely_match[2].text:
+                elements["url"] = likely_match[2].text
+            else:
+                elements["telephone_number"] = likely_match[2].text
+        if len(likely_match) > 4:
+            if '.' in likely_match[3].text:
+                elements["url"] = likely_match[3].text
+            else:
+                elements["telephone_number"] = likely_match[3].text
+        return elements
+
+
     def _get_place_info(self, provided_driver=None):
         """Función que extrae la información general del local comercial. Así también se llama a las funciones para
         obtener la ocupación y los comentarios
@@ -324,10 +350,10 @@ class PlacesExtractor(AbstractGMapsExtractor):
         score_obj = self.get_obj_text(xpath_query=self._place_score_xpath, external_driver=driver)
         total_score_obj = self.get_obj_text(xpath_query=self._total_votes_xpath, external_driver=driver)
         total_score_val = total_score_obj.replace("(", "").replace(")", "") if total_score_obj else total_score_obj
-        address_obj = self.get_obj_text(xpath_query=self._address_xpath, external_driver=driver)
-        address_obj_val = address_obj if address_obj else self._place_address
-        coords_obj = self.get_obj_text(xpath_query=self._coords_xpath_selector, external_driver=driver)
-        telephone_obj = self.get_obj_text(xpath_query=self._telephone_xpath_selector, external_driver=driver)
+        # address_obj = self.get_obj_text(xpath_query=self._address_xpath, external_driver=driver)
+        # address_obj_val = address_obj if address_obj else self._place_address
+        # coords_obj = self.get_obj_text(xpath_query=self._coords_xpath_selector, external_driver=driver)
+        # telephone_obj = self.get_obj_text(xpath_query=self._telephone_xpath_selector, external_driver=driver)
         opening_obj_el = self.get_info_obj(xpath_query=self._openning_hours_xpath_selector, external_driver=driver)
         opening_obj = opening_obj_el if opening_obj_el else self.get_info_obj(xpath_query=self._openning_hours_xpath_selector_aux, external_driver=driver)
         price_range = self.get_obj_text(xpath_query=self._price_range, external_driver=driver)
@@ -344,14 +370,15 @@ class PlacesExtractor(AbstractGMapsExtractor):
         #     .format(name=self._place_name, date=self._extraction_date, addr=address_obj))
         # else:
         #     comments_list = self._get_comments(self._place_name, self.sleep_m, external_driver=driver)
+        elements = self._get_elements_match(provided_driver=driver)
         place_info = {
             "name": name_val,
             "score": score_obj,
             "total_scores": total_score_val,
-            "address": address_obj_val,
+            # "address": address_obj_val,
             "occupancy": occupancy_obj,
-            "coordinates": coords_obj,
-            "telephone_number": telephone_obj,
+            # "coordinates": coords_obj,
+            # "telephone_number": telephone_obj,
             "opening_hours": opening_value,
             "comments": comments_list,
             "zip_code": self._postal_code,
@@ -364,6 +391,7 @@ class PlacesExtractor(AbstractGMapsExtractor):
             "current_url": driver.current_url,
             "execution_id": self._execution_id
         }
+        place_info.update(elements)
         self.logger.info("-{place}-: info retrieved for place".format(place=self._place_name))
         return place_info
 
