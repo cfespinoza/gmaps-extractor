@@ -489,6 +489,8 @@ class PlacesExtractor(AbstractGMapsExtractor):
         try:
             self.force_sleep(self.sleep_xs)
             # búsqueda del local comercial en el listado de resultados: `self.shared_result_elements_xpath_query`
+            driver.wait.until(
+                ec.visibility_of_all_elements_located((By.XPATH, self.shared_result_elements_xpath_query)))
             page_elements = driver.find_elements_by_xpath(self.shared_result_elements_xpath_query)
             place_obj = self.found_place_in_list(page_elements)
             # places_objs = {place.text.split("\n")[0]: place for place in page_elements}
@@ -668,14 +670,22 @@ class PlacesExtractor(AbstractGMapsExtractor):
             return place_info
 
     def found_place_in_list(self, page_elements):
+        self.logger.info("Looking for: -{name}- and -{address} in url: -{url}-".format(
+            name=self._place_name, address=self._place_address, url=self._url))
         for place in page_elements:
             splitted = place.text.split("\n")
-            name = splitted[0]
-            address = self.extract_current_address(name, splitted[2]) if len(splitted) > 2 else None
-            if address and address == self._place_address:
+            name = place.find_element_by_xpath("div[@class='section-result-text-content']//h3/span").text
+            address = place.find_element_by_xpath(
+                "div[@class='section-result-text-content']//span[contains(@class, 'section-result-location')]").text
+            if name == self._place_name and address == self._place_address:
+                self.logger.debug("Found: -{name}- and -{address}".format(name=self._place_name,
+                                                                         address=self._place_address))
+                self.logger.debug("In list has been found: -{name}- and -{address}".format(name=name, address=address))
+
                 self.logger.debug("-{place}-: found in search list due to ambiguous name nearby with {address}"
                                   .format(address=address, place=self._place_name))
                 return place
-            elif name == self._place_name:
-                return place
+
+        self.logger.warning("Not found: -{name}- and -{address}".format(
+            name=self._place_name, address=self._place_address))
         return None

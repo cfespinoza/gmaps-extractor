@@ -97,15 +97,27 @@ class OptimizedResultsExtractor(AbstractGMapsExtractor):
             diccionario que contiene la información básica del resultado
 
         """
-        r_description_arr = single_rest_result.text.split("\n")
-        name = r_description_arr[0]
-        self.logger.debug("-{postal_code}-: restaurant found -{name}-".format(postal_code=self._postal_code, name=name))
-        address = r_description_arr[2] if len(r_description_arr) > 2 else None
+        name = single_rest_result.find_element_by_xpath("div[@class='section-result-text-content']//h3/span").text
+        self.logger.info("-{postal_code}-: place found name: -{name}-".format(postal_code=self._postal_code, name=name))
+        found_type = single_rest_result.find_element_by_xpath("div[@class='section-result-text-content']//span[contains(@class, 'section-result-details')]").text
+        cost = single_rest_result.find_element_by_xpath("div[@class='section-result-text-content']//span[contains(@class, 'section-result-cost')]").text
+        address = single_rest_result.find_element_by_xpath("div[@class='section-result-text-content']//span[contains(@class, 'section-result-location')]").text
+        telephone = single_rest_result.find_element_by_xpath("div[@class='section-result-text-content']//span[contains(@class, 'section-result-phone-number')]/span").text
+
+        if address == "":
+            url = self._url_place_template.format(postal_code_info=self._postal_code_info, coords=self._coords,
+                                                  places_types=self._places_types, place_name=name.replace(" ", "+"))
+        else:
+            url = self._url_place_template.format(postal_code_info=self._postal_code_info, coords=self._coords,
+                                                  places_types=address.replace(" ", "+"),
+                                                  place_name=name.replace(" ", "+"))
         return {
             "name": name,
-            "address": self.extract_current_address(name, address),
-            "url": self._url_place_template.format(postal_code_info=self._postal_code_info, coords=self._coords,
-                                                   places_types=self._places_types, place_name=name.replace(" ", "+"))
+            "address": address,
+            "type": found_type,
+            "cost": cost,
+            "telephone": telephone,
+            "url": url
         }
 
     def scrap(self):
