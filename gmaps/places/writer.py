@@ -241,10 +241,14 @@ class PlaceDbWriter(DbWriter):
             cursor.execute(self._find_place_query, (name, date, address))
             db_element = cursor.fetchone()
             element_id = None
+            self.logger.info("-{place}- is being registered in database with address -{address}- and date -{date}-"
+                .format(place=name, date=date, address=address))
             if db_element and not is_update:
                 # si el local comercial ya existe en la base de datos para la fecha de ejecución, se marca como
                 # insertado: `inserted = True`
-                self.logger.info("-{place}-: commercial premise found in database".format(place=name))
+                self.logger.info(
+                    "-{place}- with address -{address}- and date -{date}- found in database with: -{dbelement}-".format(
+                        place=name, date=date, address=address, dbelement=db_element))
                 inserted = True
             else:
                 # si no está, se inserta primero en la tabla `commercial_premise` y se obtiene el id para el local
@@ -311,7 +315,8 @@ class PlaceDbWriter(DbWriter):
                     self.logger.info("-{place}-: storing commercial premise occupancy in database".format(place=name))
                     for week_day, content in self.decompose_occupancy_data(element["occupancy"]).items():
                         if content and content.items():
-                            values += [(element_id, week_day, key, value, date, address_hash) for key, value in content.items()]
+                            values += [(element_id, week_day, key, value, date, address_hash) for key, value in
+                                       content.items()]
                     try:
                         cursor.executemany(self._commercial_premise_occupation_query, values)
                         self.db.commit()
@@ -411,4 +416,3 @@ class PlaceFileWriter(FileWriter):
             self.logger.error("there are errors trying to write the following element: ")
             self.logger.error(element)
             return False
-
