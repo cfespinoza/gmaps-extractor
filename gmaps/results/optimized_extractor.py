@@ -104,6 +104,7 @@ class OptimizedResultsExtractor(AbstractGMapsExtractor):
         address = single_rest_result.find_element_by_xpath("div[@class='section-result-text-content']//span[contains(@class, 'section-result-location')]").text
         telephone = single_rest_result.find_element_by_xpath("div[@class='section-result-text-content']//span[contains(@class, 'section-result-phone-number')]/span").text
 
+        """
         if address == "":
             url = self._url_place_template.format(postal_code_info=self._postal_code_info, coords=self._coords,
                                                   places_types=self._places_types, place_name=name.replace(" ", "+"))
@@ -111,6 +112,9 @@ class OptimizedResultsExtractor(AbstractGMapsExtractor):
             url = self._url_place_template.format(postal_code_info=self._postal_code_info, coords=self._coords,
                                                   places_types=address.replace(" ", "+"),
                                                   place_name=name.replace(" ", "+"))
+        """
+        url = self._url_place_template.format(postal_code_info=self._postal_code_info, coords=self._coords,
+                                              places_types=self._places_types, place_name=name.replace(" ", "+"))
         return {
             "name": name,
             "address": address,
