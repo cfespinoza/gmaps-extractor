@@ -283,6 +283,9 @@ class PlacesExtractor(AbstractGMapsExtractor):
         occupancy = None
         occupancy_obj = {}
         try:
+            xpath_query = "//*[@id='pane']/div/div//div[@class='section-popular-times']/div[@class='section-popular-times-container']"
+            driver.wait.until(
+                ec.visibility_of_all_elements_located((By.XPATH, xpath_query)))
             occupancy = driver.find_element_by_class_name('section-popular-times')
             if occupancy:
                 days_occupancy_container = occupancy.find_elements_by_xpath(
@@ -500,6 +503,40 @@ class PlacesExtractor(AbstractGMapsExtractor):
                 place_info = self._get_place_info(provided_driver=driver)
             else:
                 self.logger.warning("-{place}-: was not found in search list".format(place=self._place_name))
+                new_url_parts = self._url.split("/")
+                new_url_prefix = "/".join(new_url_parts[0:-2])
+                name_formatted = self._place_name.replace(" ", "+")
+                address_formatted = self._place_address.replace(" ", "+")
+                new_url = "{prefix}/{address}+{name}/{coords}".format(
+                    prefix=new_url_prefix,
+                    address=address_formatted,
+                    name=name_formatted,
+                    coords=new_url_parts[-1]
+                )
+                self.logger.warning("-{place}-: will be forced to url: {url}".format(place=self._place_name, url=new_url))
+                driver.get(new_url)
+                try:
+                    driver.wait.until(
+                        ec.visibility_of_all_elements_located((By.XPATH, self.shared_result_elements_xpath_query)))
+                    page_elements = driver.find_elements_by_xpath(self.shared_result_elements_xpath_query)
+                    place_obj = self.found_place_in_list(page_elements)
+                    if place_obj:
+                        # el nombre del local comercial se encuentra en los resultados y se procede a clickar sobre él y extraer
+                        # la información una vez se haya cargado la página del local comercial
+                        self.logger.debug("-{place}-: found in search list in -{url}-".format(
+                            place=self._place_name, url=new_url))
+                        # found_place = places_objs.get(self._place_name)
+                        found_place = place_obj
+                        driver.execute_script("arguments[0].click();", found_place)
+                        driver.wait.until(ec.url_changes(driver.current_url))
+                        self.force_sleep(self.sleep_m)
+                        place_info = self._get_place_info(provided_driver=driver)
+                except TimeoutException as te:
+                    current_url = driver.current_url
+                    if new_url != current_url:
+                        self.logger.warning("-{place}-: search url -{url}- has changed to {c_url}"
+                                            .format(place=self._place_name, url=new_url, c_url=current_url))
+                        place_info = self._get_place_info(provided_driver=driver)
         except StaleElementReferenceException as sere:
             # se ha detectado un error tratando de acceder a algún elemento del DOM de la página y se vuelve a intentar
             # extraer la información sin volver a procesar ninguna URL. Llamada recursiva a _scrap
@@ -518,12 +555,16 @@ class PlacesExtractor(AbstractGMapsExtractor):
             self.logger.error(str(te))
             self.logger.warning("-{place}-: TimeoutException detected: accessing to ambiguous results: -{url}-".format(
                 place=self._place_name, url=driver.current_url))
-            if self._retries < self._max_retries:
-                self._retries += 1
-                place_info = self._force_scrap(driver)
+            current_url = driver.current_url
+            if current_url != self._url:
+                place_info = self._get_place_info(provided_driver=driver)
             else:
-                self.logger.warning("-{place}-: aborting retrying to force scraping due to max retries reached".format(
-                        place=self._place_name))
+                if self._retries < self._max_retries:
+                    self._retries += 1
+                    place_info = self._force_scrap(driver)
+                else:
+                    self.logger.warning("-{place}-: aborting retrying to force scraping due to max retries reached".format(
+                            place=self._place_name))
         except Exception as e:
             # error no controlado durante la extracción de la información. Se sale de la ejecución sin forzar la
             # extracción de la información
