@@ -564,7 +564,10 @@ class PlacesExtractor(AbstractGMapsExtractor):
             self.logger.warning("-{place}-: TimeoutException detected: accessing to ambiguous results: -{url}-".format(
                 place=self._place_name, url=driver.current_url))
             current_url = driver.current_url
-            if current_url != self._url:
+            if 'place' in current_url or current_url != self._url:
+                self.logger.warning(
+                    "-{place}-: place url -{url}- is not the same to -{c_url}-".format(
+                        place=self._place_name, url=self._url, c_url=driver.current_url))
                 place_info = self._get_place_info(provided_driver=driver)
             else:
                 if self._retries < self._max_retries:
