@@ -14,7 +14,7 @@ sql_main_table = """
         name VARCHAR(600) NOT NULL,
         zip_code VARCHAR(5) NOT NULL,
         coordinates VARCHAR(600),
-        telephone_number VARCHAR(25),
+        telephone_number VARCHAR(600),
         opening_hours VARCHAR(600),
         type VARCHAR(600),
         score FLOAT DEFAULT 0.0,
