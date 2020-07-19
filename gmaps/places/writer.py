@@ -187,15 +187,17 @@ class PlaceDbWriter(DbWriter):
         """Ejecuta la query para comprobar si el local comercial ha sido registrado para la fecha pasada por argumento.
         """
         session = self.session_factory()
+        is_registered = False
         name = data.get("name", "")
         address = "{prefix_address}%".format(prefix_address=data.get("address", ""))
         commercial_premise = session.query(CommercialPremise) \
             .filter(CommercialPremise.name.ilike(name)) \
             .filter(CommercialPremise.full_address.ilike(address)).first()
-        in_execution = session.query(ExecutionResult) \
-            .filter(ExecutionResult.execution_id == data.get("execution_id")) \
-            .filter(ExecutionResult.commercial_premise_id == commercial_premise.id).first()
-        is_registered = in_execution is not None
+        if commercial_premise:
+            in_execution = session.query(ExecutionResult) \
+                .filter(ExecutionResult.execution_id == data.get("execution_id")) \
+                .filter(ExecutionResult.commercial_premise_id == commercial_premise.id).first()
+            is_registered = in_execution is not None
         return is_registered
 
     def write(self, element, is_update=False):

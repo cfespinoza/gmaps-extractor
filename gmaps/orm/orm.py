@@ -14,7 +14,9 @@ Base = declarative_base()
 # commercial_premise table
 class CommercialPremise(Base):
     __tablename__ = 'commercial_premise_base'
-    id = Column(Integer, primary_key=True)
+    __table_args__ = (UniqueConstraint('name', 'full_address'),)
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String)
     full_address = Column(String)
     street = Column(String)
@@ -30,9 +32,6 @@ class CommercialPremise(Base):
     gmaps_url = Column(String)
     coordinates_lat = Column(String)
     coordinates_long = Column(String)
-
-    execution_id = Column(Integer, ForeignKey('execution.id'))
-    UniqueConstraint('name', 'full_address', name='uix_name_full_address')
 
     def __init__(self, from_json):
         self.name = from_json.get("name")
@@ -52,7 +51,6 @@ class CommercialPremise(Base):
         gps_coords = self.gmaps_url.split("!3d")[-1].split("!4d") if "/place/" in self.gmaps_url else None
         self.coordinates_lat = str(gps_coords[0]).replace(".", ",") if gps_coords is not None else None
         self.coordinates_long = str(gps_coords[1]).replace(".", ",") if gps_coords is not None else None
-        self.execution_id = from_json.get("execution_id")
 
 
 # commercial_premise_info table
@@ -149,6 +147,7 @@ class ExecutionDetail(Base):
 
 class ExecutionResult(Base):
     __tablename__ = 'execution_results'
+    __table_args__ = (UniqueConstraint('execution_id', 'commercial_premise_id'),)
     id = Column(Integer, primary_key=True)
     execution_id = Column(Integer, ForeignKey('execution.id'), primary_key=True)
     commercial_premise_id = Column(Integer, ForeignKey('commercial_premise_base.id'), primary_key=True)
