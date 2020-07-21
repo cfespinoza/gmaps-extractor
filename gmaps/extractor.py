@@ -292,6 +292,7 @@ def extract():
         #     recovery(logger=logger, execution_config=execution_config, today_date=today_date)
         #     recovery(logger=logger, execution_config=execution_config, today_date=today_date, is_forced=True)
         extraction(logger=logger, execution_config=execution_config, execution_id=execution_id, db_engine=db_engine)
+        # print("nothing")
     else:
         logger.error("there are error in configuration files. Some required configurations are not present")
         logger.error("required keys: {keys}".format(keys=required_keys))

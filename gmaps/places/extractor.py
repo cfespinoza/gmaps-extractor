@@ -1,3 +1,5 @@
+import json
+
 import logging
 import threading
 import time
@@ -313,7 +315,8 @@ class PlacesExtractor(AbstractGMapsExtractor):
             ec.visibility_of_all_elements_located((By.XPATH, xpath_query)))
         likely_match = driver.find_elements_by_xpath(xpath_query)
         elements = {}
-        self.logger.info("-{place}-: likely match found: {found}".format(place=self._place_name, found=len(likely_match)))
+        self.logger.info(
+            "-{place}-: likely match found: {found}".format(place=self._place_name, found=len(likely_match)))
         if len(likely_match) > 1:
             elements["address"] = likely_match[0].text
         if len(likely_match) > 2:
@@ -329,7 +332,6 @@ class PlacesExtractor(AbstractGMapsExtractor):
             else:
                 elements["telephone_number"] = likely_match[3].text
         return elements
-
 
     def _get_place_info(self, provided_driver=None):
         """Función que extrae la información general del local comercial. Así también se llama a las funciones para
@@ -359,7 +361,8 @@ class PlacesExtractor(AbstractGMapsExtractor):
         # coords_obj = self.get_obj_text(xpath_query=self._coords_xpath_selector, external_driver=driver)
         # telephone_obj = self.get_obj_text(xpath_query=self._telephone_xpath_selector, external_driver=driver)
         opening_obj_el = self.get_info_obj(xpath_query=self._openning_hours_xpath_selector, external_driver=driver)
-        opening_obj = opening_obj_el if opening_obj_el else self.get_info_obj(xpath_query=self._openning_hours_xpath_selector_aux, external_driver=driver)
+        opening_obj = opening_obj_el if opening_obj_el else self.get_info_obj(
+            xpath_query=self._openning_hours_xpath_selector_aux, external_driver=driver)
         price_range = self.get_obj_text(xpath_query=self._price_range, external_driver=driver)
         style = self.get_obj_text(xpath_query=self._style, external_driver=driver)
         premise_type = self.get_obj_text(xpath_query=self._premise_type, external_driver=driver)
@@ -490,7 +493,7 @@ class PlacesExtractor(AbstractGMapsExtractor):
             "execution_id": self._execution_id
         }
         try:
-            self.force_sleep(self.sleep_xs)
+            # self.force_sleep(self.sleep_xs)
             # búsqueda del local comercial en el listado de resultados: `self.shared_result_elements_xpath_query`
             driver.wait.until(
                 ec.visibility_of_all_elements_located((By.XPATH, self.shared_result_elements_xpath_query)))
@@ -501,13 +504,13 @@ class PlacesExtractor(AbstractGMapsExtractor):
             if place_obj:
                 # el nombre del local comercial se encuentra en los resultados y se procede a clickar sobre él y extraer
                 # la información una vez se haya cargado la página del local comercial
-                self.logger.debug("-{place}-: found in search list due to ambiguous name nearby".format(
+                self.logger.info("-{place}-: found in search list due to ambiguous name nearby".format(
                     place=self._place_name))
                 # found_place = places_objs.get(self._place_name)
                 found_place = place_obj
                 driver.execute_script("arguments[0].click();", found_place)
                 driver.wait.until(ec.url_changes(driver.current_url))
-                self.force_sleep(self.sleep_m)
+                # self.force_sleep(self.sleep_m)
                 place_info = self._get_place_info(provided_driver=driver)
             else:
                 self.logger.warning("-{place}-: was not found in search list".format(place=self._place_name))
@@ -521,7 +524,8 @@ class PlacesExtractor(AbstractGMapsExtractor):
                     name=name_formatted,
                     coords=new_url_parts[-1]
                 )
-                self.logger.warning("-{place}-: will be forced to url: {url}".format(place=self._place_name, url=new_url))
+                self.logger.warning(
+                    "-{place}-: will be forced to url: {url}".format(place=self._place_name, url=new_url))
                 driver.get(new_url)
                 try:
                     driver.wait.until(
@@ -529,8 +533,8 @@ class PlacesExtractor(AbstractGMapsExtractor):
                     page_elements = driver.find_elements_by_xpath(self.shared_result_elements_xpath_query)
                     place_obj = self.found_place_in_list(page_elements)
                     if place_obj:
-                        # el nombre del local comercial se encuentra en los resultados y se procede a clickar sobre él y extraer
-                        # la información una vez se haya cargado la página del local comercial
+                        # el nombre del local comercial se encuentra en los resultados y se procede a clickar sobre
+                        # él y extraer la información una vez se haya cargado la página del local comercial
                         self.logger.debug("-{place}-: found in search list in -{url}-".format(
                             place=self._place_name, url=new_url))
                         # found_place = places_objs.get(self._place_name)
@@ -545,18 +549,6 @@ class PlacesExtractor(AbstractGMapsExtractor):
                         self.logger.warning("-{place}-: search url -{url}- has changed to {c_url}"
                                             .format(place=self._place_name, url=new_url, c_url=current_url))
                         place_info = self._get_place_info(provided_driver=driver)
-        except StaleElementReferenceException as sere:
-            # se ha detectado un error tratando de acceder a algún elemento del DOM de la página y se vuelve a intentar
-            # extraer la información sin volver a procesar ninguna URL. Llamada recursiva a _scrap
-            self.logger.error(str(sere))
-            self.logger.warning("-{place}-: StaleElementReferenceException detected: accessing to ambiguous results: -{url}-".format(
-                place=self._place_name, url=driver.current_url))
-            if self._retries < self._max_retries:
-                self._retries += 1
-                place_info = self._force_scrap(driver)
-            else:
-                self.logger.warning("-{place}-: aborting retrying to force scraping due to max retries reached".format(
-                        place=self._place_name))
         except TimeoutException as te:
             # se ha detectado de timeout esprando a que la página termine de cargar y se vuelve a intentar a
             # extraer la información sin volver a procesar ninguna URL. Llamada recursiva a _scrap
@@ -574,7 +566,8 @@ class PlacesExtractor(AbstractGMapsExtractor):
                     self._retries += 1
                     place_info = self._force_scrap(driver)
                 else:
-                    self.logger.warning("-{place}-: aborting retrying to force scraping due to max retries reached".format(
+                    self.logger.warning(
+                        "-{place}-: aborting retrying to force scraping due to max retries reached".format(
                             place=self._place_name))
         except Exception as e:
             # error no controlado durante la extracción de la información. Se sale de la ejecución sin forzar la
@@ -618,13 +611,16 @@ class PlacesExtractor(AbstractGMapsExtractor):
             # checkeo si ya existe registro para la fecha de extracción y el nombre del local para evitar volver a
             # procesarlo
             is_registered = self._writer.is_registered({"name": self._place_name, "date": self._extraction_date,
-                                                        "address": self._place_address, "execution_id": self._execution_id})
+                                                        "address": self._place_address,
+                                                        "execution_id": self._execution_id})
             if is_registered:
                 self.logger.warning("-{name}-: place in {address} and for date: -{date}- is already processed".format(
                     name=self._place_name, date=self._extraction_date, address=self._place_address))
                 result_to_return = {"is_registered": True}
             else:
                 place_info = self._scrap(driver)
+                self.logger.error("-{name}-: place info found: {info}".format(name=self._place_name,
+                                                                              info=json.dumps(place_info, default=str)))
                 result_to_return = self.export_data(place_info)
         except Exception as e:
             self.logger.error("-{name}-: error during reviews extraction: {error}".format(name=self._place_name,
@@ -686,7 +682,7 @@ class PlacesExtractor(AbstractGMapsExtractor):
             # empieza el proceso de extracción
             driver.get(self._url)
             driver.wait.until(ec.url_changes(self._url))
-            self.force_sleep(self.sleep_m)
+            # self.force_sleep(self.sleep_m)
             place_info = self._get_place_info(provided_driver=driver)
         except TimeoutException as te:
             # en caso de un error de debido a la demora en la carga de la página web, se registra en los logs el error y
@@ -696,19 +692,6 @@ class PlacesExtractor(AbstractGMapsExtractor):
                 url=self._url,
                 exception=str(te)
             ))
-            self.logger.warning("-{place}-: forcing to look up information again".format(place=self._place_name))
-            place_info = self._force_scrap(provided_driver=driver)
-        except StaleElementReferenceException as sere:
-            # en caso de un error de debido a inconsistencia en el DOM de la página web, se registra en los logs el
-            # error y se vuelve a intentar la extracción llamando a la función  `_scrap`
-            self.logger.warning(
-                "{exception} - stale element reference detected during reviews extraction: -{name}- and -{url}-".format(
-                    exception=str(sere),
-                    name=self._place_name,
-                    url=self._url
-                ))
-            self.force_sleep(self.sleep_m)
-            self.logger.warning("-{name}-: forcing to look up information again".format(name=self._place_name))
             place_info = self._force_scrap(provided_driver=driver)
         finally:
             return place_info
@@ -721,15 +704,13 @@ class PlacesExtractor(AbstractGMapsExtractor):
             name = place.find_element_by_xpath("div[@class='section-result-text-content']//h3/span").text
             address = place.find_element_by_xpath(
                 "div[@class='section-result-text-content']//span[contains(@class, 'section-result-location')]").text
-            if name == self._place_name and address == self._place_address:
+            if name == self._place_name and self._place_address in address:
                 self.logger.debug("Found: -{name}- and -{address}".format(name=self._place_name,
-                                                                         address=self._place_address))
+                                                                          address=self._place_address))
                 self.logger.debug("In list has been found: -{name}- and -{address}".format(name=name, address=address))
-
                 self.logger.debug("-{place}-: found in search list due to ambiguous name nearby with {address}"
                                   .format(address=address, place=self._place_name))
                 return place
-
         self.logger.warning("Not found: -{name}- and -{address}".format(
             name=self._place_name, address=self._place_address))
         return None

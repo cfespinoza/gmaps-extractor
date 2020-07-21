@@ -1,3 +1,4 @@
+import csv
 import itertools
 from datetime import datetime
 
@@ -56,7 +57,7 @@ class CommercialPremise(Base):
 # commercial_premise_info table
 class CommercialPremiseInfo(Base):
     __tablename__ = 'commercial_premise_info'
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     opening_hours = Column(String)
     score = Column(Float)
     total_scores = Column(Integer)
@@ -66,12 +67,13 @@ class CommercialPremiseInfo(Base):
     execution_id = Column(Integer, ForeignKey('execution.id'))
 
     def __init__(self, from_json, commercial_premise_id):
-        op_values = from_json.get("opening_hours")[0] if len(from_json.get("opening_hours", [])) == 1 else from_json.get(
+        op_values = from_json.get("opening_hours")[0] if len(
+            from_json.get("opening_hours", [])) == 1 else from_json.get(
             "opening_hours", [])
         self.opening_hours = ",".join(op_values) if op_values else None
         self.score = float(from_json.get("score").replace(",", ".")) if from_json.get("score") else None
         self.total_scores = int(from_json.get("total_scores").replace(",", "").replace(".", "")) if from_json.get(
-                "total_scores") else None
+            "total_scores") else None
         self.price_range = from_json.get("price_range")
         self.commercial_premise_id = commercial_premise_id
         self.execution_id = from_json.get("execution_id")
@@ -80,7 +82,7 @@ class CommercialPremiseInfo(Base):
 # execution_table
 class Execution(Base):
     __tablename__ = 'execution'
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     country = Column(String)
     state = Column(String)
     province = Column(String)
@@ -94,7 +96,7 @@ class Execution(Base):
 
 class Occupation(Base):
     __tablename__ = 'commercial_premise_occupation'
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     week_day = Column(String)
     time_period = Column(String)
     occupation = Column(String)
@@ -105,7 +107,7 @@ class Occupation(Base):
 
 class Comment(Base):
     __tablename__ = 'commercial_premise_comment'
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     author = Column(String)
     publish_date = Column(String)
     reviews_by_author = Column(String)
@@ -118,7 +120,7 @@ class Comment(Base):
 
 class ZipCode(Base):
     __tablename__ = 'zip_code'
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     country = Column(String)
     state = Column(String)
     province = Column(String)
@@ -130,7 +132,7 @@ class ZipCode(Base):
 
 class CommercialPremiseType(Base):
     __tablename__ = 'commercial_premise_type'
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     code = Column(Integer)
     category = Column(String)
 
@@ -148,7 +150,7 @@ class ExecutionDetail(Base):
 class ExecutionResult(Base):
     __tablename__ = 'execution_results'
     __table_args__ = (UniqueConstraint('execution_id', 'commercial_premise_id'),)
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     execution_id = Column(Integer, ForeignKey('execution.id'), primary_key=True)
     commercial_premise_id = Column(Integer, ForeignKey('commercial_premise_base.id'), primary_key=True)
 
@@ -219,3 +221,33 @@ def get_execution_details(db_engine, execution_id):
                      "country": d.zip_code.country} for d in details]
     session.close()
     return details_json
+
+
+def reset_tables(db_config):
+    engine = get_engine(db_config)
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+
+
+def insert_zip_codes(db_config, zip_codes_csv_file):
+    engine = get_engine(db_config)
+    session_factory = sessionmaker(bind=engine)
+    session = session_factory()
+    with open(zip_codes_csv_file, 'r') as csvfile:
+        fieldnames = ("zip_code", "url", "coordinates", "country")
+        reader = csv.DictReader(csvfile, fieldnames)
+        zip_codes = [ZipCode(**zip_code) for zip_code in reader]
+        session.add_all(zip_codes)
+        session.commit()
+
+
+def insert_categories(db_config, categories_csv_file):
+    engine = get_engine(db_config)
+    session_factory = sessionmaker(bind=engine)
+    session = session_factory()
+    with open(categories_csv_file, 'r') as csvfile:
+        fieldnames = ("code", "category")
+        reader = csv.DictReader(csvfile, fieldnames)
+        categories = [CommercialPremiseType(**category) for category in reader]
+        session.add_all(categories)
+        session.commit()
