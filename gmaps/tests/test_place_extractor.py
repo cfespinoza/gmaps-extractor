@@ -1,4 +1,5 @@
 import json
+import logging
 import unittest
 from datetime import datetime
 
@@ -40,6 +41,11 @@ class TestPlaceExtractor(unittest.TestCase):
 
     def test_scrap_single_place(self):
         execution_id = self.register_execution()
+        logging.basicConfig(
+            level=logging.getLevelName("DEBUG"),
+            datefmt="%d-%m-%Y %H:%M:%S",
+            format="[%(asctime)s] [%(levelname)8s] --- %(message)s (%(filename)s:%(lineno)d)",
+        )
         scraper = PlacesExtractor(driver_location=self.execution_config.get("driver_path"),
                                   url=self.place_info.get("extractor_url"),
                                   place_name=self.place_info.get("name"),

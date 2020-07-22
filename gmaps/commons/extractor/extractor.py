@@ -93,13 +93,13 @@ class AbstractGMapsExtractor:
         self.shared_result_elements_xpath_query = "//div[contains(@class, 'section-result-content')]"
         self._driver_location = driver_location
         self._driver_options = None
-        self._driver_wait = 60
         self._driver_implicit_wait = 1
         self._driver = None
         self.sleep_xs = 2
         self.sleep_m = 5
         self.sleep_l = 10
         self.sleep_xl = 20
+        self._driver_wait = self.sleep_xl
         self._output_config = output_config
         self._writer = None
         self._postal_code = None

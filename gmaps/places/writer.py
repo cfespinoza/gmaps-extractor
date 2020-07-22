@@ -219,7 +219,7 @@ class PlaceDbWriter(DbWriter):
             si no se ha insertado.
         """
         if self.db_engine:
-            self.orm_write(element)
+            return self.orm_write(element)
         else:
             cursor = self.db.cursor()
             # Store element
@@ -360,22 +360,29 @@ class PlaceDbWriter(DbWriter):
             self.logger.debug("commercial premise found in database: {id} - {name}".format(id=db_commercial_premise.id,
                                                                                            name=db_commercial_premise.name))
         else:
+            self.logger.debug("-{name}-: registering commercial premise in database".format(name=commercial_premise))
             session.add(commercial_premise)
-            commercial_premise_id = commercial_premise.id
             session.commit()
+            commercial_premise_id = commercial_premise.id
 
         # registering execution and commercial premise relation
+        self.logger.debug("-{name}-: registering commercial premise in database for current execution -{exec_id}-"
+                          .format(name=commercial_premise, exec_id=element.get("execution_id")))
         execution_result = ExecutionResult(execution_id=element.get("execution_id"),
                                            commercial_premise_id=commercial_premise_id)
         session.add(execution_result)
         session.commit()
 
         # inserting commercial permise info
+        self.logger.debug("-{name}-: registering commercial premise info in database for current execution -{exec_id}-"
+                          .format(name=commercial_premise, exec_id=element.get("execution_id")))
         commercial_premise_info = CommercialPremiseInfo(from_json=element, commercial_premise_id=commercial_premise_id)
         session.add(commercial_premise_info)
         session.commit()
 
         # inserting comments
+        self.logger.debug("-{name}-: registering commercial premise  comments in database for execution -{exec_id}-"
+                          .format(name=commercial_premise, exec_id=element.get("execution_id")))
         comments = [Comment(**{
             "commercial_premise_id": commercial_premise_id,
             "execution_id": element.get("execution_id"),
@@ -384,7 +391,6 @@ class PlaceDbWriter(DbWriter):
             "reviews_by_author": comment.get("reviews_by_author"),
             "content": comment.get("content", ""),
             "raw_content": comment.get("raw_content", "")}) for comment in element.get("comments", [])]
-
         session.add_all(comments)
         session.commit()
 

@@ -186,7 +186,7 @@ class PlacesExtractor(AbstractGMapsExtractor):
         self._postal_code = postal_code
         self._extraction_date = extraction_date
         self._output_config = output_config
-        self._places_types = "+".join(places_types)
+        self._places_types = places_types
         self._execution_id = execution_id
         self.auto_boot()
 
@@ -306,6 +306,9 @@ class PlacesExtractor(AbstractGMapsExtractor):
         except NoSuchElementException:
             self.logger.warning("-{place}-: there is no occupancy elements in: -{url}-".format(place=self._place_name,
                                                                                                url=self._url))
+        except TimeoutException:
+            self.logger.warning("-{place}-: there is no occupancy elements in: -{url}-".format(place=self._place_name,
+                                                                                               url=self._url))
         return occupancy_obj
 
     def _get_elements_match(self, provided_driver=None):
@@ -356,10 +359,6 @@ class PlacesExtractor(AbstractGMapsExtractor):
         score_obj = self.get_obj_text(xpath_query=self._place_score_xpath, external_driver=driver)
         total_score_obj = self.get_obj_text(xpath_query=self._total_votes_xpath, external_driver=driver)
         total_score_val = total_score_obj.replace("(", "").replace(")", "") if total_score_obj else total_score_obj
-        # address_obj = self.get_obj_text(xpath_query=self._address_xpath, external_driver=driver)
-        # address_obj_val = address_obj if address_obj else self._place_address
-        # coords_obj = self.get_obj_text(xpath_query=self._coords_xpath_selector, external_driver=driver)
-        # telephone_obj = self.get_obj_text(xpath_query=self._telephone_xpath_selector, external_driver=driver)
         opening_obj_el = self.get_info_obj(xpath_query=self._openning_hours_xpath_selector, external_driver=driver)
         opening_obj = opening_obj_el if opening_obj_el else self.get_info_obj(
             xpath_query=self._openning_hours_xpath_selector_aux, external_driver=driver)
@@ -368,23 +367,12 @@ class PlacesExtractor(AbstractGMapsExtractor):
         premise_type = self.get_obj_text(xpath_query=self._premise_type, external_driver=driver)
         opening_value = opening_obj.get_attribute("aria-label").split(",") if opening_obj else []
         occupancy_obj = self._get_occupancy(external_driver=driver)
-        # se checkea si el local ya existe
-        # is_registered = self._writer.is_registered({"name": self._place_name, "date": self._extraction_date,
-        #                                             "address": address_obj})
         comments_list = self._get_comments(self._place_name, self.sleep_m, external_driver=driver)
-        # if is_registered:
-        #     self.logger.warning("the place: -{name}- for date: -{date}- located in -{addr}-is already processed"
-        #     .format(name=self._place_name, date=self._extraction_date, addr=address_obj))
-        # else:
-        #     comments_list = self._get_comments(self._place_name, self.sleep_m, external_driver=driver)
         place_info = {
             "name": name_val,
             "score": score_obj,
             "total_scores": total_score_val,
-            # "address": address_obj_val,
             "occupancy": occupancy_obj,
-            # "coordinates": coords_obj,
-            # "telephone_number": telephone_obj,
             "opening_hours": opening_value,
             "comments": comments_list,
             "zip_code": self._postal_code,
@@ -508,8 +496,12 @@ class PlacesExtractor(AbstractGMapsExtractor):
                     place=self._place_name))
                 # found_place = places_objs.get(self._place_name)
                 found_place = place_obj
+                self.logger.debug("-{place}-: clicking on place, current url: {url}".format(place=self._place_name,
+                                                                                            url=driver.current_url))
                 driver.execute_script("arguments[0].click();", found_place)
-                driver.wait.until(ec.url_changes(driver.current_url))
+                driver.wait.until(ec.url_changes(self._url))
+                self.logger.debug("-{place}-: place clicked, current url: {url}".format(place=self._place_name,
+                                                                                        url=driver.current_url))
                 # self.force_sleep(self.sleep_m)
                 place_info = self._get_place_info(provided_driver=driver)
             else:
