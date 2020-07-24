@@ -298,6 +298,9 @@ class PlacesExtractor(AbstractGMapsExtractor):
         except NoSuchElementException:
             self.logger.warning("-{place}-: there is no occupancy elements in: -{url}-".format(place=self._place_name,
                                                                                                url=self._url))
+        except TimeoutException:
+            self.logger.warning("-{place}-: there is no occupancy elements in: -{url}-".format(place=self._place_name,
+                                                                                               url=self._url))
         return occupancy_obj
 
     def _get_elements_match(self, provided_driver=None):
@@ -482,7 +485,7 @@ class PlacesExtractor(AbstractGMapsExtractor):
             "extractor_url": self._url
         }
         try:
-            self.force_sleep(self.sleep_xs)
+            # self.force_sleep(self.sleep_xs)
             # búsqueda del local comercial en el listado de resultados: `self.shared_result_elements_xpath_query`
             driver.wait.until(
                 ec.visibility_of_all_elements_located((By.XPATH, self.shared_result_elements_xpath_query)))
@@ -493,13 +496,15 @@ class PlacesExtractor(AbstractGMapsExtractor):
             if place_obj:
                 # el nombre del local comercial se encuentra en los resultados y se procede a clickar sobre él y extraer
                 # la información una vez se haya cargado la página del local comercial
-                self.logger.debug("-{place}-: found in search list due to ambiguous name nearby".format(
+                self.logger.info("-{place}-: found in search list due to ambiguous name nearby".format(
                     place=self._place_name))
                 # found_place = places_objs.get(self._place_name)
                 found_place = place_obj
                 driver.execute_script("arguments[0].click();", found_place)
-                driver.wait.until(ec.url_changes(driver.current_url))
-                self.force_sleep(self.sleep_m)
+                driver.wait.until(ec.url_changes(self._url))
+                self.logger.debug("-{place}-: place clicked, current url: {url}".format(place=self._place_name,
+                                                                                        url=driver.current_url))
+                # self.force_sleep(self.sleep_m)
                 place_info = self._get_place_info(provided_driver=driver)
             else:
                 self.logger.warning("-{place}-: was not found in search list".format(place=self._place_name))
@@ -678,7 +683,7 @@ class PlacesExtractor(AbstractGMapsExtractor):
             # empieza el proceso de extracción
             driver.get(self._url)
             driver.wait.until(ec.url_changes(self._url))
-            self.force_sleep(self.sleep_m)
+            # self.force_sleep(self.sleep_m)
             place_info = self._get_place_info(provided_driver=driver)
         except TimeoutException as te:
             # en caso de un error de debido a la demora en la carga de la página web, se registra en los logs el error y
@@ -713,9 +718,9 @@ class PlacesExtractor(AbstractGMapsExtractor):
             name = place.find_element_by_xpath("div[@class='section-result-text-content']//h3/span").text
             address = place.find_element_by_xpath(
                 "div[@class='section-result-text-content']//span[contains(@class, 'section-result-location')]").text
-            if name == self._place_name and address == self._place_address:
+            if name == self._place_name and self._place_address in address:
                 self.logger.debug("Found: -{name}- and -{address}".format(name=self._place_name,
-                                                                         address=self._place_address))
+                                                                          address=self._place_address))
                 self.logger.debug("In list has been found: -{name}- and -{address}".format(name=name, address=address))
 
                 self.logger.debug("-{place}-: found in search list due to ambiguous name nearby with {address}"
