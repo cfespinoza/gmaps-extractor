@@ -611,8 +611,6 @@ class PlacesExtractor(AbstractGMapsExtractor):
                 result_to_return = {"is_registered": True}
             else:
                 place_info = self._scrap(driver)
-                self.logger.error("-{name}-: place info found: {info}".format(name=self._place_name,
-                                                                              info=json.dumps(place_info, default=str)))
                 result_to_return = self.export_data(place_info)
         except Exception as e:
             self.logger.error("-{name}-: error during reviews extraction: {error}".format(name=self._place_name,
